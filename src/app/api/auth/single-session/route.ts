@@ -10,36 +10,70 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all active sessions for this user
-    const { data: sessions, error: sessionsError } = await supabase
-      .from('auth.sessions')
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'No active session' }, { status: 400 })
+    }
+
+    // Store current session info in a custom table for tracking
+    const { error: upsertError } = await supabase
+      .from('user_sessions')
+      .upsert({
+        user_id: user.id,
+        session_id: session.access_token,
+        device_info: request.headers.get('user-agent') || 'Unknown',
+        last_seen: new Date().toISOString(),
+        is_active: true
+      })
+
+    if (upsertError) {
+      console.error('Error storing session info:', upsertError)
+    }
+
+    // Get all other active sessions for this user
+    const { data: otherSessions, error: sessionsError } = await supabase
+      .from('user_sessions')
       .select('*')
       .eq('user_id', user.id)
+      .eq('is_active', true)
+      .neq('session_id', session.access_token)
 
     if (sessionsError) {
-      console.error('Error fetching sessions:', sessionsError)
+      console.error('Error fetching other sessions:', sessionsError)
       return NextResponse.json({ error: 'Failed to fetch sessions' }, { status: 500 })
     }
 
-    // Get current session ID from the request
-    const currentSessionId = request.headers.get('x-session-id') || 
-                           request.cookies.get('sb-access-token')?.value
+    // Mark other sessions as inactive
+    if (otherSessions && otherSessions.length > 0) {
+      const sessionIds = otherSessions.map(s => s.session_id)
+      
+      const { error: updateError } = await supabase
+        .from('user_sessions')
+        .update({ is_active: false })
+        .in('session_id', sessionIds)
 
-    // Revoke all other sessions except the current one
-    const sessionsToRevoke = sessions?.filter(session => 
-      session.id !== currentSessionId && 
-      new Date(session.expires_at) > new Date()
-    ) || []
+      if (updateError) {
+        console.error('Error updating other sessions:', updateError)
+      }
 
-    // Revoke other sessions
-    for (const session of sessionsToRevoke) {
-      await supabase.auth.admin.signOut(session.id)
+      // Try to revoke other sessions using Supabase admin (if available)
+      try {
+        for (const otherSession of otherSessions) {
+          // Note: This requires service role key and might not work in all setups
+          // The main enforcement is through the database flag
+          await supabase.auth.admin.signOut(otherSession.session_id)
+        }
+      } catch (adminError) {
+        console.log('Admin signOut not available, using database enforcement only')
+      }
     }
 
     return NextResponse.json({ 
       success: true, 
-      revokedSessions: sessionsToRevoke.length,
-      message: `Revoked ${sessionsToRevoke.length} other active sessions`
+      revokedSessions: otherSessions?.length || 0,
+      message: `Revoked ${otherSessions?.length || 0} other active sessions`
     })
   } catch (error) {
     console.error('Single session enforcement error:', error)

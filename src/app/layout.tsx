@@ -6,6 +6,7 @@ import NavbarLayout from "@/components/layout/navbar-layout";
 import { DarkModeProvider } from "@/contexts/dark-mode-context";
 import { AuthProvider } from "@/contexts/auth-context";
 import { AutoLogoutProvider } from "@/components/auto-logout-provider";
+import { SingleSessionProvider } from "@/components/single-session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -132,11 +133,13 @@ export default function RootLayout({
       >
         <AuthProvider>
           <DarkModeProvider>
-            <AutoLogoutProvider>
-              <NavbarLayout>
-                {children}
-              </NavbarLayout>
-            </AutoLogoutProvider>
+            <SingleSessionProvider>
+              <AutoLogoutProvider>
+                <NavbarLayout>
+                  {children}
+                </NavbarLayout>
+              </AutoLogoutProvider>
+            </SingleSessionProvider>
           </DarkModeProvider>
         </AuthProvider>
         <Toaster />
