@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('Setting up 2FA for user:', user.id)
-
     // Check if user already has a secret (for re-enabling)
     const { data: existingProfile } = await supabase
       .from('user_profiles')
@@ -24,13 +22,11 @@ export async function POST(request: NextRequest) {
 
     let secret
     if (existingProfile?.two_factor_secret) {
-      console.log('Reusing existing 2FA secret')
       secret = {
         base32: existingProfile.two_factor_secret,
         otpauth_url: `otpauth://totp/Password%20Vault%20(${user.email})?secret=${existingProfile.two_factor_secret}&issuer=Password%20Vault`
       }
     } else {
-      console.log('Generating new 2FA secret')
       // Generate a new secret for TOTP
       secret = speakeasy.generateSecret({
         name: `Password Vault (${user.email})`,
@@ -40,13 +36,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate QR code
-    console.log('Generating QR code...')
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url!)
-    console.log('QR code generated successfully')
 
     // Store the secret temporarily (not enabled yet) - only if it's a new secret
     if (!existingProfile?.two_factor_secret) {
-      console.log('Attempting to upsert user profile with new secret...')
       const { error: dbError } = await supabase
         .from('user_profiles')
         .upsert({
@@ -62,10 +55,7 @@ export async function POST(request: NextRequest) {
         console.error('Database error:', dbError)
         return NextResponse.json({ error: 'Failed to save 2FA setup: ' + dbError.message }, { status: 500 })
       }
-      console.log('Successfully saved new 2FA setup')
-    } else {
-      console.log('Using existing secret, no database update needed')
-    }
+    } 
 
     return NextResponse.json({
       secret: secret.base32,

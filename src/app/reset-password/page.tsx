@@ -27,10 +27,8 @@ function ResetPasswordContent() {
     const accessToken = searchParams.get('access_token')
     const type = searchParams.get('type')
 
-    console.log('Reset password page loaded with params:', { accessToken, type })
 
     if (!accessToken || type !== 'recovery') {
-      console.log('Missing access token or wrong type')
       setIsValidToken(false)
       setCheckingToken(false)
       return

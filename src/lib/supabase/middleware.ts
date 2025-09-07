@@ -35,15 +35,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  console.log('=== MIDDLEWARE DEBUG ===')
-  console.log('Middleware - Path:', request.nextUrl.pathname)
-  console.log('Middleware - User:', user ? 'authenticated' : 'not authenticated')
-  console.log('Middleware - User ID:', user?.id || 'no user')
-  console.log('Middleware - User Email:', user?.email || 'no email')
-  console.log('Middleware - Is /security?', request.nextUrl.pathname === '/security')
-  console.log('Middleware - Should redirect?', !user && request.nextUrl.pathname === '/security')
-  console.log('========================')
-
   // If user is authenticated and trying to access auth pages, redirect to vault
   if (user && (
     request.nextUrl.pathname.startsWith('/login') ||
@@ -52,7 +43,6 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/verify') ||
     request.nextUrl.pathname.startsWith('/verify-2fa')
   )) {
-    console.log('Middleware - Redirecting authenticated user to vault')
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
@@ -60,7 +50,6 @@ export async function updateSession(request: NextRequest) {
 
   // Specific check for security page
   if (request.nextUrl.pathname === '/security' && !user) {
-    console.log('Middleware - SECURITY PAGE: No user, redirecting to login')
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -80,7 +69,6 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/terms') &&
     !request.nextUrl.pathname.startsWith('/help')
   ) {
-    console.log('Middleware - Redirecting unauthenticated user to login')
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

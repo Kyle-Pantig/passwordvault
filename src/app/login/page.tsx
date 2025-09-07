@@ -24,7 +24,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      console.log('User already authenticated, redirecting to vault')
       router.replace('/')
     }
   }, [user, authLoading, router])

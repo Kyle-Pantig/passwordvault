@@ -6,8 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const { token, enable } = await request.json()
     
-    console.log('2FA verify request:', { token: token ? 'provided' : 'missing', enable })
-    
     if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 })
     }
@@ -20,16 +18,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('Verifying 2FA for user:', user.id)
-
     // Get user's 2FA secret
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('two_factor_secret, two_factor_enabled')
       .eq('user_id', user.id)
       .single()
-
-    console.log('Profile data:', { profile, profileError })
 
     if (profileError) {
       console.error('Profile error:', profileError)
@@ -45,7 +39,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the token
-    console.log('Verifying token with secret:', profile.two_factor_secret.substring(0, 8) + '...')
     const verified = speakeasy.totp.verify({
       secret: profile.two_factor_secret,
       encoding: 'base32',
@@ -53,10 +46,7 @@ export async function POST(request: NextRequest) {
       window: 2 // Allow 2 time steps (60 seconds) of tolerance
     })
 
-    console.log('Token verification result:', verified)
-
     if (!verified) {
-      console.log('Token verification failed for token:', token)
       return NextResponse.json({ 
         error: 'Invalid verification code. Please check your authenticator app and try again.',
         success: false 
@@ -86,7 +76,6 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
       }
 
-      console.log('2FA enabled successfully for user:', user.id)
       return NextResponse.json({ 
         success: true, 
         backupCodes,

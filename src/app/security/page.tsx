@@ -37,8 +37,6 @@ export default function SecurityPage() {
       
       // Analyze password risk
       const riskAnalysis = analyzePasswordRisk(data);
-      console.log('Security page - Credentials count:', data.length);
-      console.log('Security page - Risk analysis:', riskAnalysis);
       setAnalysis(riskAnalysis);
     } catch (error) {
       console.error('Error:', error);
