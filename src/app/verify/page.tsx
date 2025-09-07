@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-// import { toast } from 'sonner'
+import { toast } from 'sonner'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 
@@ -18,32 +18,93 @@ function VerifyContent() {
 
   const processVerification = async (token: string) => {
     try {
-      console.log('Processing verification with token:', token)
       
-      // Use the correct Supabase verification method
-      const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: token,
-        type: 'signup'
-      })
+      // First, try to get the current session to see if user is already verified
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionData.session?.user?.email_confirmed_at) {
+        setStatus('success')
+        setMessage('Your email has already been verified!')
+        toast.success('Email already verified!')
+        setTimeout(() => {
+          router.push('/')
+        }, 2000)
+        return
+      }
 
-      if (error) {
-        console.error('Verification error:', error)
+      // Try different verification methods
+      let verificationResult = null
+      let verificationError = null
+
+      // Method 1: Try with token_hash for signup
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: 'signup'
+        })
+        verificationResult = data
+        verificationError = error
+      } catch (err) {
+        
+        // Method 2: Try with token for email verification (requires email)
+        // We'll need to extract email from the token or use a different approach
+        try {
+          // For email verification, we need the email address
+          // Let's try a different approach - check if user is already verified
+          const { data: userData, error: userError } = await supabase.auth.getUser()
+          
+          if (userData.user?.email_confirmed_at) {
+            setStatus('success')
+            setMessage('Your email has already been verified!')
+            toast.success('Email already verified!')
+            setTimeout(() => {
+              router.push('/')
+            }, 2000)
+            return
+          } else {
+            // If user exists but not verified, the token might be expired
+            setStatus('error')
+            setMessage('Verification link has expired. Please try signing up again.')
+            toast.error('Verification link expired')
+            return
+          }
+        } catch (err2) {
+          
+          // Method 3: Try to refresh the session
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+          
+          if (refreshData.session?.user?.email_confirmed_at) {
+            setStatus('success')
+            setMessage('Your email has been successfully verified!')
+            toast.success('Email verified successfully!')
+            setTimeout(() => {
+              router.push('/')
+            }, 2000)
+            return
+          } else {
+            verificationError = refreshError || new Error('Verification failed')
+          }
+        }
+      }
+
+      if (verificationError) {
         setStatus('error')
-        setMessage(error.message)
+        setMessage(verificationError.message || 'Verification failed')
+        toast.error('Verification failed')
       } else {
-        console.log('Verification successful:', data)
         setStatus('success')
         setMessage('Your email has been successfully verified!')
+        toast.success('Email verified successfully!')
         
         // Auto login after successful verification
         setTimeout(() => {
           router.push('/')
-        }, 2000) // Show success message for 2 seconds then redirect
+        }, 2000)
       }
     } catch (error) {
-      console.error('Verification catch error:', error)
       setStatus('error')
       setMessage('An unexpected error occurred during verification')
+      toast.error('Verification failed')
     }
   }
 
@@ -52,19 +113,16 @@ function VerifyContent() {
       const token = searchParams.get('token')
       const type = searchParams.get('type')
 
-      console.log('Verification page loaded with params:', { token, type })
-      console.log('All search params:', Object.fromEntries(searchParams.entries()))
 
       if (!token) {
-        console.log('No token found')
         setStatus('error')
         setMessage('Invalid verification link')
+        toast.error('Invalid verification link')
         return
       }
 
       // If we have a token, process the verification
       if (type === 'signup') {
-        console.log('Signup verification detected, processing...')
         await processVerification(token)
         return
       }
