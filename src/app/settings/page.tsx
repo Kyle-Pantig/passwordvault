@@ -37,6 +37,12 @@ export default function SettingsPage() {
   const [verificationPassword, setVerificationPassword] = useState('')
   const [verifyingPassword, setVerifyingPassword] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showViewCodesDialog, setShowViewCodesDialog] = useState(false)
+  const [viewCodesPassword, setViewCodesPassword] = useState('')
+  const [verifyingViewPassword, setVerifyingViewPassword] = useState(false)
+  const [showViewPassword, setShowViewPassword] = useState(false)
+  const [currentBackupCodes, setCurrentBackupCodes] = useState<string[]>([])
+  const [showCurrentCodes, setShowCurrentCodes] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -282,6 +288,83 @@ export default function SettingsPage() {
 
   const handleShowBackupCodes = () => {
     setShowPasswordDialog(true)
+  }
+
+  const handleViewCurrentCodes = () => {
+    setShowViewCodesDialog(true)
+  }
+
+  const verifyPasswordForViewCodes = async () => {
+    if (!viewCodesPassword) {
+      toast.error('Please enter your password')
+      return
+    }
+
+    try {
+      setVerifyingViewPassword(true)
+      
+      // Verify password by attempting to sign in
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: viewCodesPassword,
+      })
+
+      if (error) {
+        toast.error('Incorrect password. Please try again.')
+        setViewCodesPassword('')
+        return
+      }
+
+      // Password is correct, fetch current backup codes
+      const response = await fetch('/api/2fa/get-backup-codes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setCurrentBackupCodes(data.backupCodes)
+        setShowCurrentCodes(true)
+        setShowViewCodesDialog(false)
+        setViewCodesPassword('')
+        toast.success(data.message)
+      } else {
+        toast.error(data.error || 'Failed to fetch backup codes')
+      }
+      
+    } catch (_error) {
+      toast.error('Failed to verify password')
+    } finally {
+      setVerifyingViewPassword(false)
+    }
+  }
+
+  const copyCurrentBackupCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(currentBackupCodes.join('\n'))
+      toast.success('Backup codes copied to clipboard!')
+    } catch (_error) {
+      toast.error('Failed to copy backup codes')
+    }
+  }
+
+  const downloadCurrentBackupCodes = () => {
+    const codesText = currentBackupCodes.join('\n')
+    const blob = new Blob([`Password Vault - Current 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'current-2fa-backup-codes.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const handleDeleteAccount = () => {
@@ -584,14 +667,81 @@ export default function SettingsPage() {
                       </p>
                     </div>
                     
-                    <Button
-                      onClick={handleShowBackupCodes}
-                      disabled={regeneratingCodes}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      {regeneratingCodes ? 'Generating...' : 'Generate New Backup Codes'}
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={handleViewCurrentCodes}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        View Current Backup Codes
+                      </Button>
+                      
+                      <Button
+                        onClick={handleShowBackupCodes}
+                        disabled={regeneratingCodes}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {regeneratingCodes ? 'Generating...' : 'Generate New Backup Codes'}
+                      </Button>
+                    </div>
+
+                    {showCurrentCodes && currentBackupCodes.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                          <div className="flex items-start space-x-2">
+                            <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                            <div>
+                              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                                Current Backup Codes
+                              </h4>
+                              <p className="text-sm text-blue-800 dark:text-blue-200">
+                                You have {currentBackupCodes.length} backup codes remaining. Each can only be used once.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Your Backup Codes</Label>
+                          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+                            <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+                              {currentBackupCodes.map((code, index) => (
+                                <div key={index} className="p-2 bg-white dark:bg-gray-700 rounded">
+                                  {code}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={copyCurrentBackupCodes}
+                            className="flex-1"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy All
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={downloadCurrentBackupCodes}
+                            className="flex-1"
+                          >
+                            Download
+                          </Button>
+                        </div>
+
+                        <Button
+                          onClick={() => setShowCurrentCodes(false)}
+                          variant="ghost"
+                          className="w-full"
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    )}
 
                     {showBackupCodes && backupCodes.length > 0 && (
                       <div className="space-y-4">
@@ -863,6 +1013,76 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   'Verify & Generate'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Verification Dialog for Viewing Current Backup Codes */}
+      <Dialog open={showViewCodesDialog} onOpenChange={setShowViewCodesDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <span>Verify Password</span>
+            </DialogTitle>
+            <DialogDescription>
+              Enter your password to view your current backup codes. This adds an extra layer of security.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="view-codes-password">Current Password</Label>
+              <div className="relative">
+                <Input
+                  id="view-codes-password"
+                  type={showViewPassword ? 'text' : 'password'}
+                  placeholder="Enter your current password"
+                  value={viewCodesPassword}
+                  onChange={(e) => setViewCodesPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowViewPassword(!showViewPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showViewPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowViewCodesDialog(false)
+                  setViewCodesPassword('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={verifyPasswordForViewCodes}
+                disabled={verifyingViewPassword || !viewCodesPassword}
+                className="flex-1"
+              >
+                {verifyingViewPassword ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & View'
                 )}
               </Button>
             </div>
