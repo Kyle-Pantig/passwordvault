@@ -33,6 +33,10 @@ export default function SettingsPage() {
   const [backupCodes, setBackupCodes] = useState<string[]>([])
   const [showBackupCodes, setShowBackupCodes] = useState(false)
   const [regeneratingCodes, setRegeneratingCodes] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [verificationPassword, setVerificationPassword] = useState('')
+  const [verifyingPassword, setVerifyingPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -238,6 +242,46 @@ export default function SettingsPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  const verifyPasswordForBackupCodes = async () => {
+    if (!verificationPassword) {
+      toast.error('Please enter your password')
+      return
+    }
+
+    try {
+      setVerifyingPassword(true)
+      
+      // Verify password by attempting to sign in
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: verificationPassword,
+      })
+
+      if (error) {
+        toast.error('Incorrect password. Please try again.')
+        setVerificationPassword('')
+        return
+      }
+
+      // Password is correct, proceed with backup code generation
+      await regenerateBackupCodes()
+      setShowPasswordDialog(false)
+      setVerificationPassword('')
+      
+    } catch (_error) {
+      toast.error('Failed to verify password')
+    } finally {
+      setVerifyingPassword(false)
+    }
+  }
+
+  const handleShowBackupCodes = () => {
+    setShowPasswordDialog(true)
   }
 
   const handleDeleteAccount = () => {
@@ -541,7 +585,7 @@ export default function SettingsPage() {
                     </div>
                     
                     <Button
-                      onClick={regenerateBackupCodes}
+                      onClick={handleShowBackupCodes}
                       disabled={regeneratingCodes}
                       variant="outline"
                       className="w-full"
@@ -752,6 +796,76 @@ export default function SettingsPage() {
                 </>
               )}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Verification Dialog for Backup Codes */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <span>Verify Password</span>
+            </DialogTitle>
+            <DialogDescription>
+              Enter your password to generate new backup codes. This adds an extra layer of security.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="verification-password">Current Password</Label>
+              <div className="relative">
+                <Input
+                  id="verification-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your current password"
+                  value={verificationPassword}
+                  onChange={(e) => setVerificationPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordDialog(false)
+                  setVerificationPassword('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={verifyPasswordForBackupCodes}
+                disabled={verifyingPassword || !verificationPassword}
+                className="flex-1"
+              >
+                {verifyingPassword ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & Generate'
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
