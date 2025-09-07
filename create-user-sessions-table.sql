@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS user_sessions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  session_id TEXT NOT NULL,
+  session_id TEXT NOT NULL UNIQUE,
   device_info TEXT,
   last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   is_active BOOLEAN DEFAULT true,

@@ -56,8 +56,8 @@ export function useSingleSession() {
     // Check session validity immediately
     checkSessionValidity()
 
-    // Set up periodic checking every 30 seconds
-    intervalRef.current = setInterval(checkSessionValidity, 30000)
+    // Set up periodic checking every 60 seconds (reduced frequency)
+    intervalRef.current = setInterval(checkSessionValidity, 60000)
 
     return () => {
       if (intervalRef.current) {

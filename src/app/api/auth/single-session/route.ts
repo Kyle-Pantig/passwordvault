@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Store current session info in a custom table for tracking
+    // Use session.access_token as the unique identifier
     const { error: upsertError } = await supabase
       .from('user_sessions')
       .upsert({
@@ -26,6 +27,8 @@ export async function POST(request: NextRequest) {
         device_info: request.headers.get('user-agent') || 'Unknown',
         last_seen: new Date().toISOString(),
         is_active: true
+      }, {
+        onConflict: 'session_id' // Update if session_id already exists
       })
 
     if (upsertError) {
@@ -68,6 +71,19 @@ export async function POST(request: NextRequest) {
       } catch (adminError) {
         console.log('Admin signOut not available, using database enforcement only')
       }
+    }
+
+    // Clean up old inactive sessions (older than 1 hour)
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      await supabase
+        .from('user_sessions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('is_active', false)
+        .lt('last_seen', oneHourAgo)
+    } catch (cleanupError) {
+      console.log('Session cleanup failed:', cleanupError)
     }
 
     return NextResponse.json({ 
