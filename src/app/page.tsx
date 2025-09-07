@@ -48,6 +48,9 @@ const SERVICE_OPTIONS = [
   
 ]
 
+// Define fallback services for favicon loading
+const FAVICON_SERVICES: Array<'duckduckgo' | 'faviconio' | 'direct'> = ['duckduckgo', 'faviconio', 'direct']
+
 // Password Vault features for the infinite moving cards
 const PASSWORD_VAULT_FEATURES = [
   {
@@ -193,15 +196,12 @@ export default function VaultPage() {
   //   }
   // }
 
-  const getFaviconServiceUrl = (url: string, service: 'google' | 'duckduckgo' | 'faviconio' | 'direct'): string => {
+  const getFaviconServiceUrl = (url: string, service: 'duckduckgo' | 'faviconio' | 'direct'): string => {
     try {
       if (!url || url.trim() === '') return ''
       const domain = new URL(url).hostname
       
       switch (service) {
-        case 'google':
-          // Use DuckDuckGo's favicon service instead of Google's (more reliable)
-          return `https://icons.duckduckgo.com/ip3/${domain}.ico`
         case 'duckduckgo':
           return `https://icons.duckduckgo.com/ip3/${domain}.ico`
         case 'faviconio':
@@ -239,12 +239,9 @@ export default function VaultPage() {
     const [_isLoading, setIsLoading] = useState(true)
     const [currentServiceIndex, setCurrentServiceIndex] = useState(0)
 
-    // Define fallback services in order of preference
-    const faviconServices: Array<'duckduckgo' | 'faviconio' | 'direct'> = ['duckduckgo', 'faviconio', 'direct']
-
     useEffect(() => {
       if (credential.service_url && credential.service_url.trim() !== '') {
-        const faviconUrl = getFaviconServiceUrl(credential.service_url, faviconServices[currentServiceIndex])
+        const faviconUrl = getFaviconServiceUrl(credential.service_url, FAVICON_SERVICES[currentServiceIndex])
         if (faviconUrl) {
           setCurrentSrc(faviconUrl)
           setImageError(false)
@@ -257,14 +254,14 @@ export default function VaultPage() {
         setImageError(true)
         setIsLoading(false)
       }
-    }, [credential.service_url, currentServiceIndex, faviconServices])
+    }, [credential.service_url, currentServiceIndex])
 
     const handleImageError = () => {
-      if (currentServiceIndex < faviconServices.length - 1) {
+      if (currentServiceIndex < FAVICON_SERVICES.length - 1) {
         // Try next service
         const nextServiceIndex = currentServiceIndex + 1
         setCurrentServiceIndex(nextServiceIndex)
-        const nextUrl = getFaviconServiceUrl(credential.service_url || '', faviconServices[nextServiceIndex])
+        const nextUrl = getFaviconServiceUrl(credential.service_url || '', FAVICON_SERVICES[nextServiceIndex])
         if (nextUrl) {
           setCurrentSrc(nextUrl)
           setImageError(false)
@@ -280,8 +277,8 @@ export default function VaultPage() {
     // Show fallback if no URL, error, or still loading with empty src
     if (!credential.service_url || credential.service_url.trim() === '' || imageError || !currentSrc) {
       return (
-        <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+        <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center">
+          <span className="text-sm font-bold text-white">
             {credential.service_name.charAt(0).toUpperCase()}
           </span>
         </div>
@@ -289,14 +286,15 @@ export default function VaultPage() {
     }
 
     return (
-      <div className="h-8 w-8 rounded overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+      <div className="h-8 w-8 rounded overflow-hidden flex items-center justify-center bg-white dark:bg-gray-100 shadow-sm border border-gray-200 dark:border-gray-300">
         <Image
           src={currentSrc}
           alt={credential.service_name}
           width={24}
           height={24}
-          className="h-6 w-6"
+          className="h-6 w-6 object-contain"
           onError={handleImageError}
+          unoptimized={true}
         />
       </div>
     )
