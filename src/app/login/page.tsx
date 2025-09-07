@@ -11,14 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner'
 import { Eye, EyeOff, Shield } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
+import { GoogleIcon } from '@/components/ui/google-icon'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const router = useRouter()
-  const { user, loading: authLoading, signIn, check2FAStatus } = useAuth()
+  const { user, loading: authLoading, signIn, signInWithGoogle, check2FAStatus } = useAuth()
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -53,6 +55,26 @@ export default function LoginPage() {
       toast.error('An unexpected error occurred')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true)
+
+    try {
+      const result = await signInWithGoogle()
+
+      if (!result.success) {
+        toast.error(result.error || 'Google login failed')
+        return
+      }
+
+      // Google OAuth will redirect automatically, so we don't need to handle 2FA check here
+      // as the user will be redirected to the home page
+    } catch (_error) {
+      toast.error('An unexpected error occurred with Google login')
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -131,6 +153,34 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
+          
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* Google Sign In Button */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <LoaderThree />
+            ) : (
+              <GoogleIcon className="h-4 w-4 mr-2" />
+            )}
+            {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
+          </Button>
           <div className="mt-4 space-y-3">
             <div className="text-center text-sm">
               Don't have an account?{' '}

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from 'sonner'
 import { Eye, EyeOff, ExternalLink, Check, X, Shield } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
+import { GoogleIcon } from '@/components/ui/google-icon'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -21,6 +22,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
   const [signupSuccess, setSignupSuccess] = useState(false)
   const [agreeToTerms, setAgreeToTerms] = useState(false)
@@ -28,7 +30,7 @@ export default function SignupPage() {
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | 'very-strong'>('weak')
   const [passwordErrors, setPasswordErrors] = useState<string[]>([])
   const router = useRouter()
-  const { user, loading: authLoading, signUp, resendVerification } = useAuth()
+  const { user, loading: authLoading, signUp, signInWithGoogle, resendVerification } = useAuth()
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -170,6 +172,25 @@ export default function SignupPage() {
     setPassword('')
     setConfirmPassword('')
     setAgreeToTerms(false)
+  }
+
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(true)
+
+    try {
+      const result = await signInWithGoogle()
+
+      if (!result.success) {
+        toast.error(result.error || 'Google signup failed')
+        return
+      }
+
+      // Google OAuth will redirect automatically
+    } catch (_error) {
+      toast.error('An unexpected error occurred with Google signup')
+    } finally {
+      setGoogleLoading(false)
+    }
   }
 
   if (authLoading) {
@@ -373,6 +394,35 @@ export default function SignupPage() {
               {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
           </form>
+          
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* Google Sign Up Button */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignup}
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <LoaderThree />
+            ) : (
+              <GoogleIcon className="h-4 w-4 mr-2" />
+            )}
+            {googleLoading ? 'Signing up with Google...' : 'Continue with Google'}
+          </Button>
+          
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
             <Link href="/login" className="text-blue-600 hover:underline">
