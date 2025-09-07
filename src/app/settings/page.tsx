@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useDarkMode } from '@/contexts/dark-mode-context'
-import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink } from 'lucide-react'
+import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 
 export default function SettingsPage() {
@@ -28,10 +28,74 @@ export default function SettingsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | 'very-strong'>('weak')
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
   const router = useRouter()
+
+  // Password validation rules
+  const passwordRules = [
+    { text: 'At least 8 characters', test: (pwd: string) => pwd.length >= 8 },
+    { text: 'At least 1 uppercase letter', test: (pwd: string) => /[A-Z]/.test(pwd) },
+    { text: 'At least 1 lowercase letter', test: (pwd: string) => /[a-z]/.test(pwd) },
+    { text: 'At least 1 number', test: (pwd: string) => /\d/.test(pwd) },
+    { text: 'At least 1 special character', test: (pwd: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd) },
+    { text: 'No common patterns', test: (pwd: string) => !/(.)\1{2,}/.test(pwd) && !/123|abc|qwe|asd|zxc/i.test(pwd) }
+  ]
+
+  const calculatePasswordStrength = (pwd: string) => {
+    const errors: string[] = []
+    let score = 0
+
+    passwordRules.forEach(rule => {
+      if (rule.test(pwd)) {
+        score++
+      } else {
+        errors.push(rule.text)
+      }
+    })
+
+    // Additional scoring based on length and complexity
+    if (pwd.length >= 12) score += 1
+    if (pwd.length >= 16) score += 1
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{2,}/.test(pwd)) score += 1
+    if (/\d{2,}/.test(pwd)) score += 1
+
+    setPasswordErrors(errors)
+
+    if (score <= 2) return 'weak'
+    if (score <= 4) return 'medium'
+    if (score <= 6) return 'strong'
+    return 'very-strong'
+  }
+
+  const handleNewPasswordChange = (newPassword: string) => {
+    setNewPassword(newPassword)
+    const strength = calculatePasswordStrength(newPassword)
+    setPasswordStrength(strength)
+  }
+
+  const getStrengthColor = (strength: string) => {
+    switch (strength) {
+      case 'weak': return 'text-red-500 bg-red-50 dark:bg-red-900/20'
+      case 'medium': return 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+      case 'strong': return 'text-blue-500 bg-blue-50 dark:bg-blue-900/20'
+      case 'very-strong': return 'text-green-500 bg-green-50 dark:bg-green-900/20'
+      default: return 'text-gray-500 bg-gray-50 dark:bg-gray-900/20'
+    }
+  }
+
+  const getStrengthText = (strength: string) => {
+    switch (strength) {
+      case 'weak': return 'Too Weak'
+      case 'medium': return 'Medium'
+      case 'strong': return 'Strong'
+      case 'very-strong': return 'Very Strong'
+      default: return 'Unknown'
+    }
+  }
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -66,8 +130,14 @@ export default function SettingsPage() {
       return
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long')
+    // Check password strength
+    if (passwordStrength === 'weak') {
+      toast.error('Password is too weak. Please meet all requirements.')
+      return
+    }
+
+    if (passwordErrors.length > 0) {
+      toast.error('Please fix all password requirements before continuing.')
       return
     }
 
@@ -241,6 +311,7 @@ export default function SettingsPage() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter current password"
+                      autoComplete="current-password"
                     />
                     <Button
                       type="button"
@@ -265,8 +336,9 @@ export default function SettingsPage() {
                       id="new-password"
                       type={showNewPassword ? 'text' : 'password'}
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => handleNewPasswordChange(e.target.value)}
                       placeholder="Enter new password"
+                      autoComplete="new-password"
                     />
                     <Button
                       type="button"
@@ -293,6 +365,7 @@ export default function SettingsPage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
+                      autoComplete="new-password"
                     />
                     <Button
                       type="button"
@@ -309,6 +382,49 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Password Strength Indicator */}
+                {newPassword && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Password Strength:</span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${getStrengthColor(passwordStrength)}`}>
+                        {getStrengthText(passwordStrength)}
+                      </span>
+                    </div>
+                    
+                    {/* Strength Bar */}
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                      <div 
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          passwordStrength === 'weak' ? 'bg-red-500 w-1/4' :
+                          passwordStrength === 'medium' ? 'bg-yellow-500 w-1/2' :
+                          passwordStrength === 'strong' ? 'bg-blue-500 w-3/4' :
+                          'bg-green-500 w-full'
+                        }`}
+                      />
+                    </div>
+                    
+                    {/* Password Rules */}
+                    <div className="space-y-1">
+                      {passwordRules.map((rule, index) => {
+                        const isValid = rule.test(newPassword)
+                        return (
+                          <div key={index} className="flex items-center space-x-1.5 text-xs">
+                            {isValid ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <X className="h-3 w-3 text-red-500" />
+                            )}
+                            <span className={isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              {rule.text}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <Button type="submit" disabled={isLoading} className="w-full">
                   <Save className="h-4 w-4 mr-2" />
@@ -471,6 +587,7 @@ export default function SettingsPage() {
                 placeholder="Enter your email address"
                 value={deleteConfirmationEmail}
                 onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
+                autoComplete="email"
                 className="font-mono"
               />
             </div>

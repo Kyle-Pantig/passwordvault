@@ -291,6 +291,7 @@ export default function SignupPage() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 required
               />
             </div>
@@ -303,6 +304,7 @@ export default function SignupPage() {
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) => handlePasswordChange(e.target.value)}
+                  autoComplete="new-password"
                   required
                   className="pr-10"
                 />
@@ -330,6 +332,7 @@ export default function SignupPage() {
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                   className="pr-10"
                 />
