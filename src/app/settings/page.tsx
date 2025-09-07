@@ -367,6 +367,25 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url)
   }
 
+  const copyIndividualCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      toast.success(`Copied: ${code}`)
+    } catch (_error) {
+      toast.error('Failed to copy code')
+    }
+  }
+
+  const handlePasswordKeyPress = (e: React.KeyboardEvent, isViewCodes: boolean = false) => {
+    if (e.key === 'Enter') {
+      if (isViewCodes) {
+        verifyPasswordForViewCodes()
+      } else {
+        verifyPasswordForBackupCodes()
+      }
+    }
+  }
+
   const handleDeleteAccount = () => {
     setShowDeleteDialog(true)
   }
@@ -707,8 +726,15 @@ export default function SettingsPage() {
                           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
                             <div className="grid grid-cols-2 gap-2 font-mono text-sm">
                               {currentBackupCodes.map((code, index) => (
-                                <div key={index} className="p-2 bg-white dark:bg-gray-700 rounded">
-                                  {code}
+                                <div key={index} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded">
+                                  <span className="flex-1">{code}</span>
+                                  <button
+                                    onClick={() => copyIndividualCode(code)}
+                                    className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                    title="Copy this code"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -764,8 +790,15 @@ export default function SettingsPage() {
                           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
                             <div className="grid grid-cols-2 gap-2 font-mono text-sm">
                               {backupCodes.map((code, index) => (
-                                <div key={index} className="p-2 bg-white dark:bg-gray-700 rounded">
-                                  {code}
+                                <div key={index} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded">
+                                  <span className="flex-1">{code}</span>
+                                  <button
+                                    onClick={() => copyIndividualCode(code)}
+                                    className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                    title="Copy this code"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -973,6 +1006,7 @@ export default function SettingsPage() {
                   placeholder="Enter your current password"
                   value={verificationPassword}
                   onChange={(e) => setVerificationPassword(e.target.value)}
+                  onKeyPress={(e) => handlePasswordKeyPress(e, false)}
                   autoComplete="current-password"
                   className="pr-10"
                 />
@@ -1043,6 +1077,7 @@ export default function SettingsPage() {
                   placeholder="Enter your current password"
                   value={viewCodesPassword}
                   onChange={(e) => setViewCodesPassword(e.target.value)}
+                  onKeyPress={(e) => handlePasswordKeyPress(e, true)}
                   autoComplete="current-password"
                   className="pr-10"
                 />
