@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { toast } from 'sonner'
 import { Shield, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp'
 
 function Verify2FAContent() {
   const { user, loading: authLoading } = useAuth()
@@ -47,8 +49,9 @@ function Verify2FAContent() {
     }
   }
 
-  const verifyToken = async () => {
-    if (!token && !backupCode) {
+  const verifyToken = async (otpValue?: string) => {
+    const codeToVerify = otpValue || token
+    if (!codeToVerify && !backupCode) {
       toast.error('Please enter a verification code or backup code')
       return
     }
@@ -81,7 +84,7 @@ function Verify2FAContent() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ token: codeToVerify }),
         })
 
         const data = await response.json()
@@ -97,6 +100,15 @@ function Verify2FAContent() {
       toast.error('Failed to verify code')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Auto-submit when OTP is complete
+  const handleOTPChange = (value: string) => {
+    setToken(value)
+    if (value.length === 6) {
+      // Auto-submit when 6 digits are entered
+      verifyToken(value)
     }
   }
 
@@ -131,24 +143,31 @@ function Verify2FAContent() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="token">Verification Code</Label>
-                  <Input
-                    id="token"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="123456"
-                    maxLength={6}
-                    className="text-center text-lg font-mono"
-                    onKeyPress={handleKeyPress}
-                  />
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                      value={token}
+                      onChange={handleOTPChange}
+                      disabled={loading}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
                 </div>
 
-                <Button 
-                  onClick={verifyToken} 
-                  disabled={loading || token.length !== 6}
-                  className="w-full"
-                >
-                  {loading ? 'Verifying...' : 'Verify Code'}
-                </Button>
+                {loading && (
+                  <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                    Verifying code...
+                  </div>
+                )}
 
                 <div className="text-center">
                   <button
@@ -174,7 +193,7 @@ function Verify2FAContent() {
                 </div>
 
                 <Button 
-                  onClick={verifyToken} 
+                  onClick={() => verifyToken()} 
                   disabled={loading || !backupCode}
                   className="w-full"
                 >
