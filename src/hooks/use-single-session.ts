@@ -41,14 +41,9 @@ export function useSingleSession() {
         const data = await response.json()
 
         if (!response.ok) {
-          // Only sign out if it's a 401 (unauthorized), not 406 (RLS issue)
-          if (response.status === 401) {
-            console.log('Session invalid (401), signing out')
-            console.log('Response details:', data)
-            await signOut()
-          } else {
-            console.log('API error (not 401), not signing out:', response.status, data)
-          }
+          // TEMPORARY FIX: Don't sign out on 401 errors until we fix the auth issue
+          console.log('API error, not signing out (temporary fix):', response.status, data)
+          console.log('Single session enforcement temporarily disabled due to auth issues')
           return
         }
 
