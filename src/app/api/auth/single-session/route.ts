@@ -4,16 +4,19 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     console.log('Single session API called')
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()))
+    console.log('Request cookies:', request.cookies.getAll())
+    
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     console.log('Auth check result:', { user: user?.id, error: authError?.message })
-
+    
     if (authError || !user) {
       console.log('Single session API: Unauthorized', { 
         error: authError?.message, 
         userExists: !!user,
-        errorCode: authError?.status 
+        errorCode: authError?.status
       })
       return NextResponse.json({ 
         error: 'Unauthorized', 

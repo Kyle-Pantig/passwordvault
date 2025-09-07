@@ -27,18 +27,30 @@ DROP POLICY IF EXISTS "Users can insert their own sessions" ON user_sessions;
 DROP POLICY IF EXISTS "Users can update their own sessions" ON user_sessions;
 DROP POLICY IF EXISTS "Users can delete their own sessions" ON user_sessions;
 
--- 5. Create RLS policies
-CREATE POLICY "Users can view their own sessions" ON user_sessions
-  FOR SELECT USING (auth.uid() = user_id);
+-- 5. Create RLS policies (only if they don't exist)
+DO $$ 
+BEGIN
+    -- Create policies only if they don't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_sessions' AND policyname = 'Users can view their own sessions') THEN
+        CREATE POLICY "Users can view their own sessions" ON user_sessions
+          FOR SELECT USING (auth.uid() = user_id);
+    END IF;
 
-CREATE POLICY "Users can insert their own sessions" ON user_sessions
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_sessions' AND policyname = 'Users can insert their own sessions') THEN
+        CREATE POLICY "Users can insert their own sessions" ON user_sessions
+          FOR INSERT WITH CHECK (auth.uid() = user_id);
+    END IF;
 
-CREATE POLICY "Users can update their own sessions" ON user_sessions
-  FOR UPDATE USING (auth.uid() = user_id);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_sessions' AND policyname = 'Users can update their own sessions') THEN
+        CREATE POLICY "Users can update their own sessions" ON user_sessions
+          FOR UPDATE USING (auth.uid() = user_id);
+    END IF;
 
-CREATE POLICY "Users can delete their own sessions" ON user_sessions
-  FOR DELETE USING (auth.uid() = user_id);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_sessions' AND policyname = 'Users can delete their own sessions') THEN
+        CREATE POLICY "Users can delete their own sessions" ON user_sessions
+          FOR DELETE USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- 6. Create function to update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
