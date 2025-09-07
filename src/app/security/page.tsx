@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 export default function SecurityPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [_credentials, setCredentials] = useState<Credential[]>([]);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
   const [analysis, setAnalysis] = useState<PasswordRiskAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
@@ -53,6 +53,12 @@ export default function SecurityPage() {
       ...prev,
       [credentialId]: !prev[credentialId]
     }));
+  };
+
+  // Helper function to get password for a specific credential ID
+  const getPasswordForCredential = (credentialId: string): string => {
+    const credential = credentials.find(cred => cred.id === credentialId);
+    return credential ? credential.password : '';
   };
 
   const refreshAnalysis = async () => {
@@ -264,23 +270,32 @@ export default function SecurityPage() {
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {reused.services.map((service, serviceIndex) => (
-                              <div key={serviceIndex} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
-                                <div>
-                                  <span className="font-medium text-sm">{service.service_name}</span>
-                                  <span className="ml-2 text-xs text-gray-500">({service.username})</span>
+                              <div key={serviceIndex} className="p-2 bg-white dark:bg-gray-800 rounded border">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <span className="font-medium text-sm">{service.service_name}</span>
+                                    <span className="ml-2 text-xs text-gray-500">({service.username})</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => togglePasswordVisibility(service.id)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    {showPasswords[service.id] ? (
+                                      <EyeOff className="h-3 w-3" />
+                                    ) : (
+                                      <Eye className="h-3 w-3" />
+                                    )}
+                                  </Button>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => togglePasswordVisibility(service.id)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  {showPasswords[service.id] ? (
-                                    <EyeOff className="h-3 w-3" />
-                                  ) : (
-                                    <Eye className="h-3 w-3" />
-                                  )}
-                                </Button>
+                                {/* Password Display */}
+                                <div className="mt-2">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Password:</div>
+                                  <div className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm font-mono">
+                                    {showPasswords[service.id] ? getPasswordForCredential(service.id) : '••••••••'}
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
