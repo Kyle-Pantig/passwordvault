@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { toast } from 'sonner'
 import { useDarkMode } from '@/contexts/dark-mode-context'
 import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X, Copy, AlertTriangle } from 'lucide-react'
@@ -43,6 +44,7 @@ export default function SettingsPage() {
   const [showViewPassword, setShowViewPassword] = useState(false)
   const [currentBackupCodes, setCurrentBackupCodes] = useState<string[]>([])
   const [showCurrentCodes, setShowCurrentCodes] = useState(false)
+  const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -499,136 +501,153 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div>
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="current-password"
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                      autoComplete="current-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => togglePasswordVisibility('current')}
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="new-password">New Password</Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="new-password"
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => handleNewPasswordChange(e.target.value)}
-                      placeholder="Enter new password"
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => togglePasswordVisibility('new')}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="confirm-password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => togglePasswordVisibility('confirm')}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Password Strength Indicator */}
-                {newPassword && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600 dark:text-gray-400">Password Strength:</span>
-                      <span className={`text-xs font-medium px-2 py-1 rounded ${getStrengthColor(passwordStrength)}`}>
-                        {getStrengthText(passwordStrength)}
-                      </span>
+              <Accordion 
+                type="single" 
+                collapsible 
+                value={passwordAccordionOpen ? "password" : ""}
+                onValueChange={(value) => setPasswordAccordionOpen(value === "password")}
+              >
+                <AccordionItem value="password">
+                  <AccordionTrigger className="text-left">
+                    <div className="flex items-center space-x-2">
+                      <Save className="h-4 w-4" />
+                      <span>Change Password</span>
                     </div>
-                    
-                    {/* Strength Bar */}
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                      <div 
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                          passwordStrength === 'weak' ? 'bg-red-500 w-1/4' :
-                          passwordStrength === 'medium' ? 'bg-yellow-500 w-1/2' :
-                          passwordStrength === 'strong' ? 'bg-blue-500 w-3/4' :
-                          'bg-green-500 w-full'
-                        }`}
-                      />
-                    </div>
-                    
-                    {/* Password Rules */}
-                    <div className="space-y-1">
-                      {passwordRules.map((rule, index) => {
-                        const isValid = rule.test(newPassword)
-                        return (
-                          <div key={index} className="flex items-center space-x-1.5 text-xs">
-                            {isValid ? (
-                              <Check className="h-3 w-3 text-green-500" />
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <form onSubmit={handlePasswordChange} className="space-y-4 pt-4">
+                      <div>
+                        <Label htmlFor="current-password">Current Password</Label>
+                        <div className="relative mt-1">
+                          <Input
+                            id="current-password"
+                            type={showCurrentPassword ? 'text' : 'password'}
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Enter current password"
+                            autoComplete="current-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => togglePasswordVisibility('current')}
+                          >
+                            {showCurrentPassword ? (
+                              <EyeOff className="h-4 w-4" />
                             ) : (
-                              <X className="h-3 w-3 text-red-500" />
+                              <Eye className="h-4 w-4" />
                             )}
-                            <span className={isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                              {rule.text}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="new-password">New Password</Label>
+                        <div className="relative mt-1">
+                          <Input
+                            id="new-password"
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={newPassword}
+                            onChange={(e) => handleNewPasswordChange(e.target.value)}
+                            placeholder="Enter new password"
+                            autoComplete="new-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => togglePasswordVisibility('new')}
+                          >
+                            {showNewPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                        <div className="relative mt-1">
+                          <Input
+                            id="confirm-password"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm new password"
+                            autoComplete="new-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => togglePasswordVisibility('confirm')}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Password Strength Indicator */}
+                      {newPassword && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">Password Strength:</span>
+                            <span className={`text-xs font-medium px-2 py-1 rounded ${getStrengthColor(passwordStrength)}`}>
+                              {getStrengthText(passwordStrength)}
                             </span>
                           </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
+                          
+                          {/* Strength Bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                            <div 
+                              className={`h-1.5 rounded-full transition-all duration-300 ${
+                                passwordStrength === 'weak' ? 'bg-red-500 w-1/4' :
+                                passwordStrength === 'medium' ? 'bg-yellow-500 w-1/2' :
+                                passwordStrength === 'strong' ? 'bg-blue-500 w-3/4' :
+                                'bg-green-500 w-full'
+                              }`}
+                            />
+                          </div>
+                          
+                          {/* Password Rules */}
+                          <div className="space-y-1">
+                            {passwordRules.map((rule, index) => {
+                              const isValid = rule.test(newPassword)
+                              return (
+                                <div key={index} className="flex items-center space-x-1.5 text-xs">
+                                  {isValid ? (
+                                    <Check className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <X className="h-3 w-3 text-red-500" />
+                                  )}
+                                  <span className={isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                    {rule.text}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
 
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Updating...' : 'Update Password'}
-                </Button>
-              </form>
+                      <Button type="submit" disabled={isLoading} className="w-full">
+                        <Save className="h-4 w-4 mr-2" />
+                        {isLoading ? 'Updating...' : 'Update Password'}
+                      </Button>
+                    </form>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </CardContent>
           </Card>
 
