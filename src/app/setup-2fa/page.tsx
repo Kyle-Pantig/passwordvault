@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 // import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Shield, Copy, Check, AlertTriangle } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
+import { REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp'
 
 export default function Setup2FAPage() {
   const { user, loading: authLoading } = useAuth()
@@ -60,8 +62,18 @@ export default function Setup2FAPage() {
     }
   }
 
-  const verifyToken = async () => {
-    if (!token) {
+  // Auto-submit when OTP is complete
+  const handleOTPChange = (value: string) => {
+    setToken(value)
+    if (value.length === 6) {
+      // Auto-submit when 6 digits are entered
+      verifyToken(value)
+    }
+  }
+
+  const verifyToken = async (otpValue?: string) => {
+    const codeToVerify = otpValue || token
+    if (!codeToVerify) {
       toast.error('Please enter the verification code')
       return
     }
@@ -74,7 +86,7 @@ export default function Setup2FAPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token, enable: true }),
+        body: JSON.stringify({ token: codeToVerify, enable: true }),
       })
 
       let data
@@ -229,25 +241,36 @@ export default function Setup2FAPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-               <div className="space-y-2">
-                 <Label htmlFor="token">Verification Code</Label>
-                 <Input
-                   id="token"
-                   value={token}
-                   onChange={(e) => setToken(e.target.value)}
-                   onKeyPress={(e) => {
-                     if (e.key === 'Enter' && token.length === 6 && !loading) {
-                       verifyToken()
-                     }
-                   }}
-                   placeholder="123456"
-                   maxLength={6}
-                   className="text-center text-lg font-mono"
-                 />
-               </div>
+              <div className="space-y-2">
+                <Label htmlFor="token">Verification Code</Label>
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                    value={token}
+                    onChange={handleOTPChange}
+                    disabled={loading}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+
+              {loading && (
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                  Verifying code...
+                </div>
+              )}
 
               <Button 
-                onClick={verifyToken} 
+                onClick={() => verifyToken()} 
                 disabled={loading || token.length !== 6}
                 className="w-full"
               >
