@@ -25,7 +25,7 @@ export default function DebugSessionPage() {
       const data = await response.json()
       setApiResult(data)
     } catch (error) {
-      setApiResult({ error: error.message })
+      setApiResult({ error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setLoading(false)
     }
