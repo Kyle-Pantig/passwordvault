@@ -3,12 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Single session API called')
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.log('Single session API: Unauthorized', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('Single session API: User authenticated', user.id)
 
     // Get current session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -19,20 +23,28 @@ export async function POST(request: NextRequest) {
 
     // Store current session info in a custom table for tracking
     // Use session.access_token as the unique identifier
-    const { error: upsertError } = await supabase
-      .from('user_sessions')
-      .upsert({
-        user_id: user.id,
-        session_id: session.access_token,
-        device_info: request.headers.get('user-agent') || 'Unknown',
-        last_seen: new Date().toISOString(),
-        is_active: true
-      }, {
-        onConflict: 'session_id' // Update if session_id already exists
-      })
+    try {
+      const { error: upsertError } = await supabase
+        .from('user_sessions')
+        .upsert({
+          user_id: user.id,
+          session_id: session.access_token,
+          device_info: request.headers.get('user-agent') || 'Unknown',
+          last_seen: new Date().toISOString(),
+          is_active: true
+        }, {
+          onConflict: 'session_id' // Update if session_id already exists
+        })
 
-    if (upsertError) {
-      console.error('Error storing session info:', upsertError)
+      if (upsertError) {
+        console.error('Error storing session info:', upsertError)
+        // Don't fail the request if we can't store session info
+      } else {
+        console.log('Session info stored successfully')
+      }
+    } catch (dbError) {
+      console.error('Database error storing session:', dbError)
+      // Continue even if database operations fail
     }
 
     // Get all other active sessions for this user

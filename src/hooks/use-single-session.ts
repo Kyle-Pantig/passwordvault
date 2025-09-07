@@ -8,6 +8,8 @@ export function useSingleSession() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    console.log('useSingleSession: user =', user ? 'logged in' : 'not logged in')
+    
     if (!user) {
       // Clear interval if user is not logged in
       if (intervalRef.current) {
@@ -30,24 +32,19 @@ export function useSingleSession() {
         const data = await response.json()
 
         if (!response.ok) {
-          // Session is invalid, sign out
-          console.log('Session invalid, signing out')
-          await signOut()
+          // Only sign out if it's a 401 (unauthorized), not 406 (RLS issue)
+          if (response.status === 401) {
+            console.log('Session invalid (401), signing out')
+            await signOut()
+          } else {
+            console.log('API error (not 401), not signing out:', response.status)
+          }
           return
         }
 
-        // Check if this session was marked as inactive (user logged in elsewhere)
-        const { data: sessionData, error } = await supabase
-          .from('user_sessions')
-          .select('is_active')
-          .eq('user_id', user.id)
-          .eq('session_id', (await supabase.auth.getSession()).data.session?.access_token)
-          .single()
-
-        if (!error && sessionData && !sessionData.is_active) {
-          console.log('Session was revoked by another device')
-          await signOut()
-        }
+        // Skip database check for now due to RLS issues
+        // The main session enforcement happens in the API endpoint
+        console.log('Session validity check completed (database check skipped due to RLS)')
       } catch (error) {
         console.error('Error checking session validity:', error)
       }

@@ -13,5 +13,8 @@ export function SingleSessionProvider({ children }: SingleSessionProviderProps) 
   // This hook will handle single session enforcement
   useSingleSession()
 
+  // Debug logging
+  console.log('SingleSessionProvider: user =', user ? 'logged in' : 'not logged in')
+
   return <>{children}</>
 }
