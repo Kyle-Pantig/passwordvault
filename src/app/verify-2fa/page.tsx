@@ -120,23 +120,26 @@ function Verify2FAContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Two-Factor Authentication
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Enter the verification code from your authenticator app
-          </p>
-        </div>
-
+      <div className="w-full max-w-md">
         <Card>
-          <CardHeader>
-            <CardTitle>Verify Your Identity</CardTitle>
-            <CardDescription>
-              {email && `Enter the code for ${email}`}
-            </CardDescription>
+          <CardHeader className="text-center">
+            <div className="flex flex-col items-center space-y-4">
+              <Shield className="h-12 w-12 text-blue-600" />
+              <div>
+                <CardTitle className="text-2xl font-bold">
+                  Two-Factor Authentication
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Enter the verification code from your authenticator app
+                </CardDescription>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t">
+              <CardTitle className="text-lg">Verify Your Identity</CardTitle>
+              <CardDescription>
+                {email && `Enter the code for ${email}`}
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {!useBackupCode ? (
