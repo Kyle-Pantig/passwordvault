@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useDarkMode } from '@/contexts/dark-mode-context'
-import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X } from 'lucide-react'
+import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X, Copy, AlertTriangle } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 
 export default function SettingsPage() {
@@ -30,6 +30,9 @@ export default function SettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | 'very-strong'>('weak')
   const [passwordErrors, setPasswordErrors] = useState<string[]>([])
+  const [backupCodes, setBackupCodes] = useState<string[]>([])
+  const [showBackupCodes, setShowBackupCodes] = useState(false)
+  const [regeneratingCodes, setRegeneratingCodes] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -177,6 +180,7 @@ export default function SettingsPage() {
 
         if (response.ok) {
           setTwoFactorEnabled(false)
+          setBackupCodes([])
           toast.success('Two-factor authentication disabled')
         } else {
           const data = await response.json()
@@ -186,6 +190,54 @@ export default function SettingsPage() {
         toast.error('Failed to disable 2FA')
       }
     }
+  }
+
+  const regenerateBackupCodes = async () => {
+    try {
+      setRegeneratingCodes(true)
+      const response = await fetch('/api/2fa/regenerate-backup-codes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setBackupCodes(data.backupCodes)
+        setShowBackupCodes(true)
+        toast.success('New backup codes generated!')
+      } else {
+        toast.error(data.error || 'Failed to regenerate backup codes')
+      }
+    } catch (_error) {
+      toast.error('Failed to regenerate backup codes')
+    } finally {
+      setRegeneratingCodes(false)
+    }
+  }
+
+  const copyBackupCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(backupCodes.join('\n'))
+      toast.success('Backup codes copied to clipboard!')
+    } catch (_error) {
+      toast.error('Failed to copy backup codes')
+    }
+  }
+
+  const downloadBackupCodes = () => {
+    const codesText = backupCodes.join('\n')
+    const blob = new Blob([`Password Vault - 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '2fa-backup-codes.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const handleDeleteAccount = () => {
@@ -475,6 +527,87 @@ export default function SettingsPage() {
                   className="cursor-pointer"
                 />
               </div>
+
+              {/* Backup Codes Management */}
+              {twoFactorEnabled && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Backup Codes</Label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Generate new backup codes for emergency access
+                      </p>
+                    </div>
+                    
+                    <Button
+                      onClick={regenerateBackupCodes}
+                      disabled={regeneratingCodes}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {regeneratingCodes ? 'Generating...' : 'Generate New Backup Codes'}
+                    </Button>
+
+                    {showBackupCodes && backupCodes.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                          <div className="flex items-start space-x-2">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                            <div>
+                              <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                                Save These Backup Codes
+                              </h4>
+                              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                Each backup code can only be used once. Store them in a safe place.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>New Backup Codes</Label>
+                          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+                            <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+                              {backupCodes.map((code, index) => (
+                                <div key={index} className="p-2 bg-white dark:bg-gray-700 rounded">
+                                  {code}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={copyBackupCodes}
+                            className="flex-1"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy All
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={downloadBackupCodes}
+                            className="flex-1"
+                          >
+                            Download
+                          </Button>
+                        </div>
+
+                        <Button
+                          onClick={() => setShowBackupCodes(false)}
+                          variant="ghost"
+                          className="w-full"
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

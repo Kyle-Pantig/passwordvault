@@ -79,6 +79,12 @@ function Verify2FAContent() {
 
         if (response.ok) {
           toast.success('Login successful!')
+          
+          // Show warning if provided
+          if (data.warning) {
+            toast.warning(data.warning)
+          }
+          
           router.push('/')
         } else {
           toast.error(data.error || 'Invalid backup code')

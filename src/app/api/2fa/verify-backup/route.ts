@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('user_profiles')
       .update({
-        two_factor_backup_codes: updatedCodes
+        two_factor_backup_codes: updatedCodes.length > 0 ? updatedCodes : null
       })
       .eq('user_id', user.id)
 
@@ -49,7 +49,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update backup codes' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    // Check if this was the last backup code
+    const remainingCodes = updatedCodes.length
+    const response: any = { success: true }
+    
+    if (remainingCodes === 0) {
+      response.warning = 'This was your last backup code. Please generate new backup codes in your settings.'
+    } else if (remainingCodes <= 2) {
+      response.warning = `You have ${remainingCodes} backup codes remaining. Consider generating new ones.`
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Backup code verification error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
