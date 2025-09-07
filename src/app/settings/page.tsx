@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [currentBackupCodes, setCurrentBackupCodes] = useState<string[]>([])
   const [showCurrentCodes, setShowCurrentCodes] = useState(false)
   const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false)
+  const [singleSessionEnabled, setSingleSessionEnabled] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -648,6 +649,22 @@ export default function SettingsPage() {
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Single Session Mode</Label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Logout from other devices when signing in from a new browser
+                  </p>
+                </div>
+                <Switch
+                  checked={singleSessionEnabled}
+                  onCheckedChange={setSingleSessionEnabled}
+                  className="cursor-pointer"
+                />
+              </div>
             </CardContent>
           </Card>
 
