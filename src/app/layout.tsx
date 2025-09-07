@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     title: "Password Vault | Secure Password Manager & Digital Vault",
     description:
       "Password Vault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
-    url: "https://passwordvault.vercel.app",
+    url: "https://passwordvault-pi.vercel.app",
     siteName: "Password Vault",
     type: "website",
     locale: "en_US",
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
     google: "your-google-verification-code",
   },
   alternates: {
-    canonical: "https://passwordvault.vercel.app",
+    canonical: "https://passwordvault-pi.vercel.app",
   },
 };
 
@@ -106,7 +106,7 @@ export default function RootLayout({
         <meta name="google-adsense-account" content="ca-pub-3057643117380889" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link rel="canonical" href="https://passwordvault.vercel.app" />
+        <link rel="canonical" href="https://passwordvault-pi.vercel.app" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
