@@ -21,6 +21,7 @@ function Verify2FAContent() {
   const [loading, setLoading] = useState(false)
   const [useBackupCode, setUseBackupCode] = useState(false)
   const [email, setEmail] = useState('')
+  const [checking2FA, setChecking2FA] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
@@ -35,6 +36,7 @@ function Verify2FAContent() {
 
   const check2FAStatus = async () => {
     try {
+      setChecking2FA(true)
       const response = await fetch('/api/2fa/status')
       const { twoFactorEnabled } = await response.json()
       
@@ -42,10 +44,13 @@ function Verify2FAContent() {
         // User doesn't have 2FA enabled, redirect to home
         toast.success('Signed in successfully!')
         router.push('/')
+      } else {
+        setChecking2FA(false)
       }
     } catch (error) {
       console.error('Error checking 2FA status:', error)
       // If there's an error checking 2FA status, assume 2FA is required
+      setChecking2FA(false)
     }
   }
 
@@ -116,6 +121,39 @@ function Verify2FAContent() {
     if (e.key === 'Enter') {
       verifyToken()
     }
+  }
+
+  // Show loading state while checking 2FA status
+  if (checking2FA) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black px-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="flex flex-col items-center space-y-4">
+                <Shield className="h-12 w-12 text-blue-600" />
+                <div>
+                  <CardTitle className="text-2xl font-bold">
+                    Verifying Authentication
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    Please wait while we verify your login...
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Checking your security settings...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
