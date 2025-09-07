@@ -46,6 +46,9 @@ export default function SettingsPage() {
   const [showCurrentCodes, setShowCurrentCodes] = useState(false)
   const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false)
   const [singleSessionEnabled, setSingleSessionEnabled] = useState(false)
+  const [autoLogoutEnabled, setAutoLogoutEnabled] = useState(true)
+  const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(30)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -136,6 +139,9 @@ export default function SettingsPage() {
     } catch (_error) {
       console.error('Failed to load 2FA status:', _error)
     }
+    
+    // Load security settings from database
+    await loadSettings()
   }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -391,6 +397,94 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = () => {
     setShowDeleteDialog(true)
+  }
+
+  // Load user settings from database
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setSingleSessionEnabled(data.settings.singleSessionEnabled)
+        setAutoLogoutEnabled(data.settings.autoLogoutEnabled)
+        setAutoLogoutMinutes(data.settings.autoLogoutMinutes)
+        setSettingsLoaded(true)
+      } else {
+        console.error('Failed to load settings:', data.error)
+        setSettingsLoaded(true) // Still set to true to show UI
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      setSettingsLoaded(true) // Still set to true to show UI
+    }
+  }
+
+  // Save settings to database
+  const saveSettings = async (settings: {
+    singleSessionEnabled: boolean
+    autoLogoutEnabled: boolean
+    autoLogoutMinutes: number
+  }) => {
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast.success('Settings saved successfully')
+      } else {
+        toast.error(data.error || 'Failed to save settings')
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast.error('Failed to save settings')
+    }
+  }
+
+  // Update single session setting
+  const updateSingleSessionSetting = async (enabled: boolean) => {
+    setSingleSessionEnabled(enabled)
+    
+    const settings = {
+      singleSessionEnabled: enabled,
+      autoLogoutEnabled,
+      autoLogoutMinutes
+    }
+    
+    await saveSettings(settings)
+  }
+
+  // Update auto-logout settings
+  const updateAutoLogoutSettings = async (enabled: boolean, minutes: number) => {
+    setAutoLogoutEnabled(enabled)
+    setAutoLogoutMinutes(minutes)
+    
+    const settings = {
+      singleSessionEnabled,
+      autoLogoutEnabled: enabled,
+      autoLogoutMinutes: minutes
+    }
+    
+    await saveSettings(settings)
+    
+    // Notify auto-logout provider
+    const event = new CustomEvent('autoLogoutSettingsChange', {
+      detail: { type: 'autoLogout', settings: { enabled, timeoutMinutes: minutes } }
+    })
+    window.dispatchEvent(event)
   }
 
   const confirmDeleteAccount = async () => {
@@ -650,7 +744,7 @@ export default function SettingsPage() {
                 </AccordionItem>
               </Accordion>
 
-              <Separator />
+              <Separator className="my-6" />
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -661,40 +755,57 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={singleSessionEnabled}
-                  onCheckedChange={setSingleSessionEnabled}
+                  onCheckedChange={updateSingleSessionSetting}
+                  disabled={!settingsLoaded}
                   className="cursor-pointer"
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Preferences Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bell className="h-5 w-5" />
-                <span>Preferences</span>
-              </CardTitle>
-              <CardDescription>
-                Customize your experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Dark Mode</Label>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Switch between light and dark themes
-                  </p>
+              <Separator className="my-6" />
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Auto Logout</Label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Automatically logout after period of inactivity for security
+                    </p>
+                  </div>
+                  <Switch
+                    checked={autoLogoutEnabled}
+                    onCheckedChange={(enabled) => updateAutoLogoutSettings(enabled, autoLogoutMinutes)}
+                    disabled={!settingsLoaded}
+                    className="cursor-pointer"
+                  />
                 </div>
-                <Switch
-                  checked={darkMode}
-                  onCheckedChange={setDarkMode}
-                  className="cursor-pointer"
-                />
+
+                {autoLogoutEnabled && (
+                  <div className="space-y-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                    <Label htmlFor="logout-timeout">Timeout Duration (minutes)</Label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="logout-timeout"
+                        type="range"
+                        min="5"
+                        max="120"
+                        step="5"
+                        value={autoLogoutMinutes}
+                        onChange={(e) => updateAutoLogoutSettings(autoLogoutEnabled, Number(e.target.value))}
+                        disabled={!settingsLoaded}
+                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                      />
+                      <span className="text-sm font-medium w-12 text-center">
+                        {autoLogoutMinutes}m
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      You will be warned 5 minutes before auto-logout
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <Separator />
+              <Separator className="my-6" />
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -713,7 +824,7 @@ export default function SettingsPage() {
               {/* Backup Codes Management */}
               {twoFactorEnabled && (
                 <>
-                  <Separator />
+                  <Separator className="my-6" />
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Backup Codes</Label>
@@ -871,6 +982,34 @@ export default function SettingsPage() {
                   </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Preferences Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Bell className="h-5 w-5" />
+                <span>Preferences</span>
+              </CardTitle>
+              <CardDescription>
+                Customize your experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Dark Mode</Label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Switch between light and dark themes
+                  </p>
+                </div>
+                <Switch
+                  checked={darkMode}
+                  onCheckedChange={setDarkMode}
+                  className="cursor-pointer"
+                />
+              </div>
             </CardContent>
           </Card>
 
