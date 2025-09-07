@@ -270,14 +270,6 @@ export default function Setup2FAPage() {
               )}
 
               <Button 
-                onClick={() => verifyToken()} 
-                disabled={loading || token.length !== 6}
-                className="w-full"
-              >
-                {loading ? 'Verifying...' : 'Verify & Enable 2FA'}
-              </Button>
-
-              <Button 
                 variant="outline" 
                 onClick={() => setStep(1)}
                 className="w-full"
