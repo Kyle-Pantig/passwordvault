@@ -1,7 +1,6 @@
 'use client'
 
 import { useAuth } from '@/contexts/auth-context'
-import { useSingleSession } from '@/hooks/use-single-session'
 import { useState } from 'react'
 
 export default function DebugSessionPage() {
@@ -9,8 +8,8 @@ export default function DebugSessionPage() {
   const [apiResult, setApiResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   
-  // This will trigger the session monitoring
-  useSingleSession()
+  // Note: useSingleSession is already called in SingleSessionProvider
+  // No need to call it again here
 
   const testAPI = async () => {
     setLoading(true)

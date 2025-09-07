@@ -1,96 +1,85 @@
-# Single Session Setup Instructions
+# Single Session Management Setup
 
-## Overview
-I've implemented a comprehensive single-session system that will automatically log out users from other devices when they log in from a new device. This ensures only one active session per user at any time.
+This document explains how to set up the single session management feature for your application.
 
-## What Was Implemented
+## What is Single Session Management?
 
-### 1. Database Table
-- Created `user_sessions` table to track active sessions
-- Includes user ID, session token, device info, and active status
-- Automatic cleanup of old inactive sessions
+Single session management ensures that only one active session is allowed per user at a time. When a user logs in from a new device or browser, all other active sessions are automatically terminated.
 
-### 2. API Endpoint (`/api/auth/single-session`)
-- Tracks current session in database
-- Marks other sessions as inactive when new login occurs
-- Attempts to revoke other sessions using Supabase admin
+## Setup Instructions
 
-### 3. Real-time Session Monitoring
-- Added `SingleSessionProvider` component to monitor sessions
-- Checks session validity every 30 seconds
-- Automatically logs out if session is marked as inactive
+### Option 1: Using Supabase SQL Editor (Recommended)
 
-### 4. Enhanced Auth Context
-- Enforces single session on every login
-- Shows notification when other sessions are revoked
-- Better session state management
+1. Open your Supabase project dashboard
+2. Go to the SQL Editor
+3. Copy and paste the contents of `setup-user-sessions.sql`
+4. Run the SQL script
+5. Verify that the `user_sessions` table was created successfully
 
-## Setup Steps
+### Option 2: Using the Setup Script
 
-### 1. Run Database Migration
-Execute the SQL in `create-user-sessions-table.sql` in your Supabase SQL editor:
+1. Make sure you have the required environment variables in your `.env.local`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   ```
 
-```sql
--- Copy and paste the entire contents of create-user-sessions-table.sql
-```
-
-### 2. Deploy the Changes
-The following files have been updated:
-- `src/app/api/auth/single-session/route.ts` - Enhanced API endpoint
-- `src/contexts/auth-context.tsx` - Added session enforcement on login
-- `src/hooks/use-single-session.ts` - Real-time session monitoring
-- `src/components/single-session-provider.tsx` - New component for session monitoring
-- `src/app/layout.tsx` - Added SingleSessionProvider to layout
-
-### 3. Test the Functionality
-
-1. **Login from Device A** - Should work normally
-2. **Login from Device B** - Device A should be automatically logged out
-3. **Check Device A** - Should show logged out state within 30 seconds
+2. Run the setup script:
+   ```bash
+   node setup-database.js
+   ```
 
 ## How It Works
 
-1. **On Login**: 
-   - New session is recorded in `user_sessions` table
-   - All other active sessions for the user are marked as inactive
-   - User gets notification about revoked sessions
-
-2. **Session Monitoring**:
-   - Every 30 seconds, each device checks if its session is still active
-   - If session is marked as inactive, user is automatically logged out
-   - This ensures immediate logout when logging in from another device
-
-3. **Database Cleanup**:
-   - Old inactive sessions are automatically cleaned up after 7 days
-   - Only active sessions are kept in the database
+1. **Session Tracking**: When a user logs in, their session information is stored in the `user_sessions` table
+2. **Session Validation**: The system periodically checks if the current session is still valid
+3. **Session Enforcement**: When a new session is created, all other active sessions for that user are marked as inactive
+4. **Automatic Cleanup**: Old inactive sessions are automatically cleaned up
 
 ## Troubleshooting
 
-### If Single Session Isn't Working:
+### Common Issues
 
-1. **Check Database**: Ensure `user_sessions` table exists and has proper permissions
-2. **Check Console**: Look for errors in browser console
-3. **Check Network**: Verify API calls to `/api/auth/single-session` are working
-4. **Check Supabase**: Ensure RLS policies are properly set up
+1. **401 Unauthorized Errors**
+   - This usually means the `user_sessions` table doesn't exist or RLS policies are too restrictive
+   - Run the setup SQL script to create the table and policies
 
-### Common Issues:
+2. **Database Connection Issues**
+   - Check your Supabase credentials
+   - Verify your database is accessible
+   - The system will continue to work even if database operations fail (with limited functionality)
 
-- **RLS Policy**: Make sure users can only see their own sessions
-- **Service Role**: Admin signOut might not work without proper service role key
-- **Timing**: Session checks happen every 30 seconds, so there might be a delay
+3. **Session Not Being Stored**
+   - Check the browser console for error messages
+   - Verify the RLS policies allow the current user to insert records
+   - Make sure the `user_sessions` table exists
 
-## Security Features
+### Debug Information
 
-- **Row Level Security**: Users can only access their own sessions
-- **Automatic Cleanup**: Old sessions are automatically removed
-- **Real-time Monitoring**: Continuous checking ensures immediate logout
-- **Device Tracking**: Each session includes device information for debugging
+The system provides detailed logging in the browser console:
+- `SingleSessionProvider: user = logged in/not logged in` - Shows authentication state
+- `Session validity check completed` - Shows when session checks are performed
+- `Database operations failed` - Indicates database connectivity issues
 
-## Next Steps
+## Testing
 
-1. Run the database migration
-2. Deploy the updated code
-3. Test with multiple devices
-4. Monitor the `user_sessions` table to verify it's working
+1. Log in to your application
+2. Open the browser console
+3. Look for session-related log messages
+4. Check the `user_sessions` table in your Supabase dashboard
+5. Try logging in from another device/browser to test session enforcement
 
-The system should now properly enforce single-session login across all devices!
+## Configuration
+
+The session check interval can be modified in `src/hooks/use-single-session.ts`:
+```typescript
+// Set up periodic checking every 60 seconds
+intervalRef.current = setInterval(checkSessionValidity, 60000)
+```
+
+## Security Notes
+
+- The system uses Row Level Security (RLS) to ensure users can only access their own sessions
+- Session tokens are used as unique identifiers
+- Old sessions are automatically cleaned up to prevent database bloat
+- The system gracefully handles database failures to maintain user experience

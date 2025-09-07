@@ -6,6 +6,7 @@ export function useSingleSession() {
   const { user, signOut } = useAuth()
   const supabase = createClient()
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastCheckRef = useRef<number>(0)
 
   useEffect(() => {
     console.log('useSingleSession: user =', user ? 'logged in' : 'not logged in')
@@ -21,6 +22,14 @@ export function useSingleSession() {
 
     // Check if current session is still valid
     const checkSessionValidity = async () => {
+      // Debounce: don't check more than once every 10 seconds
+      const now = Date.now()
+      if (now - lastCheckRef.current < 10000) {
+        console.log('Skipping session check (debounced)')
+        return
+      }
+      lastCheckRef.current = now
+
       try {
         const response = await fetch('/api/auth/single-session', {
           method: 'POST',
@@ -35,11 +44,17 @@ export function useSingleSession() {
           // Only sign out if it's a 401 (unauthorized), not 406 (RLS issue)
           if (response.status === 401) {
             console.log('Session invalid (401), signing out')
+            console.log('Response details:', data)
             await signOut()
           } else {
-            console.log('API error (not 401), not signing out:', response.status)
+            console.log('API error (not 401), not signing out:', response.status, data)
           }
           return
+        }
+
+        // Log database status if provided
+        if (data.warning) {
+          console.warn('Single session warning:', data.warning)
         }
 
         // Skip database check for now due to RLS issues
