@@ -79,7 +79,24 @@ export function useAutoLogout(options: AutoLogoutOptions = {}) {
 
   // Extend session (user clicked "Stay Logged In")
   const extendSession = () => {
+    // Clear all existing timers
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    if (warningTimeoutRef.current) {
+      clearTimeout(warningTimeoutRef.current)
+      warningTimeoutRef.current = null
+    }
+    
+    // Reset state
+    setTimeLeft(null)
+    setShowWarning(false)
+    lastActivityRef.current = Date.now()
+    
+    // Start fresh timers
     resetTimers()
+    
     toast.success('Session extended. You will stay logged in.', {
       duration: 3000,
     })

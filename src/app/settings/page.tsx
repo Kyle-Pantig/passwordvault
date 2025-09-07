@@ -47,7 +47,6 @@ export default function SettingsPage() {
   const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false)
   const [singleSessionEnabled, setSingleSessionEnabled] = useState(false)
   const [autoLogoutEnabled, setAutoLogoutEnabled] = useState(true)
-  const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(30)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
@@ -414,7 +413,6 @@ export default function SettingsPage() {
       if (response.ok && data.success) {
         setSingleSessionEnabled(data.settings.singleSessionEnabled)
         setAutoLogoutEnabled(data.settings.autoLogoutEnabled)
-        setAutoLogoutMinutes(data.settings.autoLogoutMinutes)
         setSettingsLoaded(true)
       } else {
         console.error('Failed to load settings:', data.error)
@@ -430,7 +428,6 @@ export default function SettingsPage() {
   const saveSettings = async (settings: {
     singleSessionEnabled: boolean
     autoLogoutEnabled: boolean
-    autoLogoutMinutes: number
   }) => {
     try {
       const response = await fetch('/api/settings', {
@@ -460,29 +457,26 @@ export default function SettingsPage() {
     
     const settings = {
       singleSessionEnabled: enabled,
-      autoLogoutEnabled,
-      autoLogoutMinutes
+      autoLogoutEnabled
     }
     
     await saveSettings(settings)
   }
 
   // Update auto-logout settings
-  const updateAutoLogoutSettings = async (enabled: boolean, minutes: number) => {
+  const updateAutoLogoutSettings = async (enabled: boolean) => {
     setAutoLogoutEnabled(enabled)
-    setAutoLogoutMinutes(minutes)
     
     const settings = {
       singleSessionEnabled,
-      autoLogoutEnabled: enabled,
-      autoLogoutMinutes: minutes
+      autoLogoutEnabled: enabled
     }
     
     await saveSettings(settings)
     
     // Notify auto-logout provider
     const event = new CustomEvent('autoLogoutSettingsChange', {
-      detail: { type: 'autoLogout', settings: { enabled, timeoutMinutes: minutes } }
+      detail: { type: 'autoLogout', settings: { enabled, timeoutMinutes: 30 } }
     })
     window.dispatchEvent(event)
   }
@@ -773,36 +767,12 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     checked={autoLogoutEnabled}
-                    onCheckedChange={(enabled) => updateAutoLogoutSettings(enabled, autoLogoutMinutes)}
+                    onCheckedChange={updateAutoLogoutSettings}
                     disabled={!settingsLoaded}
                     className="cursor-pointer"
                   />
                 </div>
 
-                {autoLogoutEnabled && (
-                  <div className="space-y-2 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
-                    <Label htmlFor="logout-timeout">Timeout Duration (minutes)</Label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        id="logout-timeout"
-                        type="range"
-                        min="5"
-                        max="120"
-                        step="5"
-                        value={autoLogoutMinutes}
-                        onChange={(e) => updateAutoLogoutSettings(autoLogoutEnabled, Number(e.target.value))}
-                        disabled={!settingsLoaded}
-                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                      />
-                      <span className="text-sm font-medium w-12 text-center">
-                        {autoLogoutMinutes}m
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      You will be warned 5 minutes before auto-logout
-                    </p>
-                  </div>
-                )}
               </div>
 
               <Separator className="my-6" />

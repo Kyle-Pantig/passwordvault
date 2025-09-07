@@ -14,7 +14,7 @@ export async function GET() {
     // Get user settings from user_profiles table
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('single_session_enabled, auto_logout_enabled, auto_logout_minutes')
+      .select('single_session_enabled, auto_logout_enabled')
       .eq('user_id', user.id)
       .single()
 
@@ -26,8 +26,7 @@ export async function GET() {
     // Return settings with defaults if no profile exists
     const settings = {
       singleSessionEnabled: profile?.single_session_enabled ?? false,
-      autoLogoutEnabled: profile?.auto_logout_enabled ?? true,
-      autoLogoutMinutes: profile?.auto_logout_minutes ?? 30
+      autoLogoutEnabled: profile?.auto_logout_enabled ?? true
     }
 
     return NextResponse.json({ success: true, settings })
@@ -43,7 +42,7 @@ export async function GET() {
 // UPDATE user settings
 export async function PUT(request: NextRequest) {
   try {
-    const { singleSessionEnabled, autoLogoutEnabled, autoLogoutMinutes } = await request.json()
+    const { singleSessionEnabled, autoLogoutEnabled } = await request.json()
     
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -59,7 +58,6 @@ export async function PUT(request: NextRequest) {
         user_id: user.id,
         single_session_enabled: singleSessionEnabled,
         auto_logout_enabled: autoLogoutEnabled,
-        auto_logout_minutes: autoLogoutMinutes,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id'

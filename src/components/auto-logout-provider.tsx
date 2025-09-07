@@ -13,7 +13,7 @@ export function AutoLogoutProvider({ children }: AutoLogoutProviderProps) {
   const { user } = useAuth()
   const [autoLogoutSettings, setAutoLogoutSettings] = useState({
     enabled: true,
-    timeoutMinutes: 30
+    timeoutMinutes: 30 // Fixed at 30 minutes
   })
 
   // Load settings from localStorage
@@ -54,7 +54,10 @@ export function AutoLogoutProvider({ children }: AutoLogoutProviderProps) {
   useEffect(() => {
     const handleSettingsChange = (event: CustomEvent) => {
       if (event.detail.type === 'autoLogout') {
-        setAutoLogoutSettings(event.detail.settings)
+        setAutoLogoutSettings({
+          enabled: event.detail.settings.enabled,
+          timeoutMinutes: 30 // Always 30 minutes
+        })
       }
     }
 
