@@ -54,9 +54,10 @@ function Verify2FAContent() {
     }
   }
 
-  const verifyToken = async (otpValue?: string) => {
+  const verifyToken = async (otpValue?: string, backupValue?: string) => {
     const codeToVerify = otpValue || token
-    if (!codeToVerify && !backupCode) {
+    const backupToVerify = backupValue || backupCode
+    if (!codeToVerify && !backupToVerify) {
       toast.error('Please enter a verification code or backup code')
       return
     }
@@ -71,7 +72,7 @@ function Verify2FAContent() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ backupCode }),
+          body: JSON.stringify({ backupCode: backupToVerify }),
         })
 
         const data = await response.json()
@@ -114,6 +115,15 @@ function Verify2FAContent() {
     if (value.length === 6) {
       // Auto-submit when 6 digits are entered
       verifyToken(value)
+    }
+  }
+
+  // Auto-submit when backup code is complete
+  const handleBackupCodeChange = (value: string) => {
+    setBackupCode(value.toUpperCase())
+    if (value.length === 6) {
+      // Auto-submit when 6 characters are entered
+      verifyToken(undefined, value.toUpperCase())
     }
   }
 
@@ -223,23 +233,31 @@ function Verify2FAContent() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="backupCode">Backup Code</Label>
-                  <Input
-                    id="backupCode"
-                    value={backupCode}
-                    onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
-                    placeholder="ABC123"
-                    className="text-center text-lg font-mono"
-                    onKeyPress={handleKeyPress}
-                  />
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                      value={backupCode}
+                      onChange={handleBackupCodeChange}
+                      disabled={loading}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
                 </div>
 
-                <Button 
-                  onClick={() => verifyToken()} 
-                  disabled={loading || !backupCode}
-                  className="w-full"
-                >
-                  {loading ? 'Verifying...' : 'Verify Backup Code'}
-                </Button>
+                {loading && (
+                  <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                    Verifying code...
+                  </div>
+                )}
 
                 <div className="text-center">
                   <button
