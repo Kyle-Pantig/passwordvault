@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
         setEmailSent(true)
         toast.success('Password reset email sent! Please check your inbox.')
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('An unexpected error occurred')
     } finally {
       setLoading(false)

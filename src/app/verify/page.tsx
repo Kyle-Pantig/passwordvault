@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from 'sonner'
+// import { toast } from 'sonner'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 
@@ -73,11 +73,11 @@ function VerifyContent() {
     }
 
     verifyEmail()
-  }, [searchParams, supabase.auth])
+  }, [searchParams, processVerification])
 
-  const handleContinue = () => {
-    router.push('/login')
-  }
+  // const handleContinue = () => {
+  //   router.push('/login')
+  // }
 
   const handleRetry = () => {
     router.push('/signup')

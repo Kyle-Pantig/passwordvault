@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session, AuthError } from '@supabase/supabase-js'
+import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } else {
         toast.success('Signed out successfully')
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error signing out')
     } finally {
       setLoading(false)

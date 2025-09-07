@@ -22,7 +22,7 @@ import {
 
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const router = useRouter()
+  const _router = useRouter()
 
   const helpSections = [
     {

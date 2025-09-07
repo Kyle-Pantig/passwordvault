@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+// import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Shield, Copy, Check, AlertTriangle } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
@@ -52,7 +53,7 @@ export default function Setup2FAPage() {
       } else {
         toast.error(data.error || 'Failed to setup 2FA')
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to setup 2FA')
     } finally {
       setLoading(false)
@@ -79,7 +80,7 @@ export default function Setup2FAPage() {
       let data
       try {
         data = await response.json()
-      } catch (parseError) {
+      } catch (_parseError) {
         toast.error('Invalid response from server')
         return
       }
@@ -104,7 +105,7 @@ export default function Setup2FAPage() {
         
         toast.error(errorMessage)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to verify code')
     } finally {
       setLoading(false)
@@ -115,7 +116,7 @@ export default function Setup2FAPage() {
     try {
       await navigator.clipboard.writeText(text)
       toast.success('Copied to clipboard!')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to copy to clipboard')
     }
   }
@@ -167,7 +168,7 @@ export default function Setup2FAPage() {
               <div className="text-center">
                 {qrCode ? (
                   <div className="bg-white p-4 rounded-lg inline-block">
-                    <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                    <Image src={qrCode} alt="2FA QR Code" width={192} height={192} className="w-48 h-48" />
                   </div>
                 ) : (
                   <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg inline-block">

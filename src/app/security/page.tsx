@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 export default function SecurityPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [_credentials, setCredentials] = useState<Credential[]>([]);
   const [analysis, setAnalysis] = useState<PasswordRiskAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});

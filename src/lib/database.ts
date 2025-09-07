@@ -57,7 +57,7 @@ export class DatabaseService {
   }
 
   async updateCredential(id: string, credentialData: UpdateCredentialData): Promise<Credential> {
-    const updateData: any = { ...credentialData }
+    const updateData: Record<string, unknown> = { ...credentialData }
     
     // Encrypt password and username if they're being updated
     if (credentialData.password) {

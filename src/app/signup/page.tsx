@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Eye, EyeOff, ExternalLink, Check, X, AlertTriangle, Shield } from 'lucide-react'
+import { Eye, EyeOff, ExternalLink, Check, X, Shield } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 
 export default function SignupPage() {
@@ -140,7 +140,7 @@ export default function SignupPage() {
         toast.success('Account created successfully! Please check your email to verify your account.')
         setSignupSuccess(true)
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -157,7 +157,7 @@ export default function SignupPage() {
       } else {
         toast.success('Verification email sent! Please check your inbox.')
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to resend verification email')
     } finally {
       setResendLoading(false)

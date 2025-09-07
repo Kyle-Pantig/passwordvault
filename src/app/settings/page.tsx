@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [_emailNotifications, setEmailNotifications] = useState(true)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState('')
@@ -53,8 +53,8 @@ export default function SettingsPage() {
         const { twoFactorEnabled } = await response.json()
         setTwoFactorEnabled(twoFactorEnabled)
       }
-    } catch (error) {
-      console.error('Failed to load 2FA status:', error)
+    } catch (_error) {
+      console.error('Failed to load 2FA status:', _error)
     }
   }
 
@@ -84,7 +84,7 @@ export default function SettingsPage() {
         setNewPassword('')
         setConfirmPassword('')
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('An unexpected error occurred')
     } finally {
       setIsLoading(false)
@@ -112,7 +112,7 @@ export default function SettingsPage() {
           const data = await response.json()
           toast.error(data.error || 'Failed to disable 2FA')
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Failed to disable 2FA')
       }
     }
@@ -147,9 +147,9 @@ export default function SettingsPage() {
       toast.success(data.message || 'Account deleted successfully')
       await signOut()
       router.push('/login')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete account. Please try again or contact support.')
-      console.error('Delete account error:', error)
+      console.error('Delete account error:', _error)
     } finally {
       setIsDeleting(false)
       setShowDeleteDialog(false)

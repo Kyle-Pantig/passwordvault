@@ -14,7 +14,6 @@ import { createClient } from '@/lib/supabase/client'
 function Verify2FAContent() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [token, setToken] = useState('')
   const [backupCode, setBackupCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -76,7 +75,7 @@ function Verify2FAContent() {
           toast.error(data.error || 'Invalid verification code')
         }
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to verify code')
     } finally {
       setLoading(false)

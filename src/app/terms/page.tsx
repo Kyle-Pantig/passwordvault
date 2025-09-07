@@ -1,12 +1,8 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 export default function TermsPage() {
-  const router = useRouter()
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">

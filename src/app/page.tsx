@@ -6,19 +6,20 @@ import { useAuth } from '@/hooks/use-auth'
 import { db } from '@/lib/database'
 import { Credential } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Eye, EyeOff, Copy, Edit, Trash2, MoreVertical, ExternalLink, Shield, Download, FileText, Lock, AlertTriangle, AlertCircle, Key, Zap, Smartphone, BarChart3, Database, RefreshCw, HardDrive, Search } from 'lucide-react'
+import { Plus, Eye, EyeOff, Copy, Edit, Trash2, MoreVertical, ExternalLink, Shield, Download, FileText, Lock, AlertTriangle, AlertCircle, Zap, Smartphone, BarChart3, Database, RefreshCw, HardDrive, Search } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 import { analyzePasswordRisk, PasswordRiskAnalysis } from '@/lib/password-risk-analysis'
-import { Spotlight } from '@/components/ui/spotlight-new'
+// import { Spotlight } from '@/components/ui/spotlight-new'
 import { InfiniteMovingCards } from '@/components/ui/infinite-moving-cards'
 import { motion } from 'motion/react'
+import Image from 'next/image'
 
 // Predefined service options with URLs
 const SERVICE_OPTIONS = [
@@ -143,7 +144,7 @@ export default function VaultPage() {
       // Analyze password risk
       const analysis = analyzePasswordRisk(data)
       setRiskAnalysis(analysis)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to load credentials')
     } finally {
       setLoading(false)
@@ -159,7 +160,7 @@ export default function VaultPage() {
       // Clear form data
       setFormData({ service_name: '', service_url: '', username: '', password: '' })
       loadCredentials()
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to add credential')
     }
   }
@@ -182,15 +183,15 @@ export default function VaultPage() {
     setFormData({ ...formData, service_name: value })
   }
 
-  const getFaviconUrl = (url: string): string => {
-    try {
-      if (!url || url.trim() === '') return ''
-      const domain = new URL(url).origin
-      return `${domain}/favicon.ico`
-    } catch {
-      return ''
-    }
-  }
+  // const getFaviconUrl = (url: string): string => {
+  //   try {
+  //     if (!url || url.trim() === '') return ''
+  //     const domain = new URL(url).origin
+  //     return `${domain}/favicon.ico`
+  //   } catch {
+  //     return ''
+  //   }
+  // }
 
   const getFaviconServiceUrl = (url: string, service: 'google' | 'duckduckgo' | 'faviconio' | 'direct'): string => {
     try {
@@ -215,27 +216,27 @@ export default function VaultPage() {
     }
   }
 
-  const getGoogleFaviconUrl = (url: string): string => {
-    try {
-      if (!url || url.trim() === '') return ''
-      const domain = new URL(url).hostname
-      
-      // Special handling for Gmail - use a more reliable service
-      if (domain === 'mail.google.com' || domain === 'gmail.com') {
-        return 'https://icons.duckduckgo.com/ip3/gmail.com.ico'
-      }
-      
-      // Use DuckDuckGo's favicon service as primary (more reliable than Google's)
-      return `https://icons.duckduckgo.com/ip3/${domain}.ico`
-    } catch {
-      return ''
-    }
-  }
+  // const getGoogleFaviconUrl = (url: string): string => {
+  //   try {
+  //     if (!url || url.trim() === '') return ''
+  //     const domain = new URL(url).hostname
+  //     
+  //     // Special handling for Gmail - use a more reliable service
+  //     if (domain === 'mail.google.com' || domain === 'gmail.com') {
+  //       return 'https://icons.duckduckgo.com/ip3/gmail.com.ico'
+  //     }
+  //     
+  //     // Use DuckDuckGo's favicon service as primary (more reliable than Google's)
+  //     return `https://icons.duckduckgo.com/ip3/${domain}.ico`
+  //   } catch {
+  //     return ''
+  //   }
+  // }
 
   const ServiceIcon = ({ credential }: { credential: Credential }) => {
     const [imageError, setImageError] = useState(false)
     const [currentSrc, setCurrentSrc] = useState('')
-    const [isLoading, setIsLoading] = useState(true)
+    const [_isLoading, setIsLoading] = useState(true)
     const [currentServiceIndex, setCurrentServiceIndex] = useState(0)
 
     // Define fallback services in order of preference
@@ -256,7 +257,7 @@ export default function VaultPage() {
         setImageError(true)
         setIsLoading(false)
       }
-    }, [credential.service_url, currentServiceIndex])
+    }, [credential.service_url, currentServiceIndex, faviconServices])
 
     const handleImageError = () => {
       if (currentServiceIndex < faviconServices.length - 1) {
@@ -289,9 +290,11 @@ export default function VaultPage() {
 
     return (
       <div className="h-8 w-8 rounded overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-        <img
+        <Image
           src={currentSrc}
           alt={credential.service_name}
+          width={24}
+          height={24}
           className="h-6 w-6"
           onError={handleImageError}
         />
@@ -319,7 +322,7 @@ export default function VaultPage() {
       setEditingCredential(null)
       setFormData({ service_name: '', service_url: '', username: '', password: '' })
       loadCredentials()
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update credential')
     }
   }
@@ -339,7 +342,7 @@ export default function VaultPage() {
       loadCredentials()
       setIsDeleteDialogOpen(false)
       setDeletingCredential(null)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete credential')
     } finally {
       setIsDeleting(false)
@@ -447,8 +450,8 @@ export default function VaultPage() {
       downloadFile(content, filename, mimeType)
       toast.success(`Credentials exported successfully as ${exportFormat.toUpperCase()}`)
       setIsExportDialogOpen(false)
-    } catch (error) {
-      console.error('Export error:', error)
+    } catch (_error) {
+      console.error('Export error:', _error)
       toast.error('Failed to export credentials')
     } finally {
       setIsExporting(false)
@@ -460,7 +463,7 @@ export default function VaultPage() {
     try {
       await navigator.clipboard.writeText(text)
       toast.success(`${type} copied to clipboard!`)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to copy to clipboard')
     }
   }
