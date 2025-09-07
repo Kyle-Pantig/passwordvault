@@ -24,10 +24,28 @@ function Verify2FAContent() {
   useEffect(() => {
     if (user && !authLoading) {
       setEmail(user.email || '')
+      // Check if user has 2FA enabled
+      check2FAStatus()
     } else if (!user && !authLoading) {
       router.push('/login')
     }
   }, [user, authLoading, router])
+
+  const check2FAStatus = async () => {
+    try {
+      const response = await fetch('/api/2fa/status')
+      const { twoFactorEnabled } = await response.json()
+      
+      if (!twoFactorEnabled) {
+        // User doesn't have 2FA enabled, redirect to home
+        toast.success('Signed in successfully!')
+        router.push('/')
+      }
+    } catch (error) {
+      console.error('Error checking 2FA status:', error)
+      // If there's an error checking 2FA status, assume 2FA is required
+    }
+  }
 
   const verifyToken = async () => {
     if (!token && !backupCode) {

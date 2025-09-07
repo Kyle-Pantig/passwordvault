@@ -69,8 +69,8 @@ export default function LoginPage() {
         return
       }
 
-      // Google OAuth will redirect automatically, so we don't need to handle 2FA check here
-      // as the user will be redirected to the home page
+      // Google OAuth will redirect to 2FA verification page
+      // The 2FA page will check if 2FA is enabled and redirect accordingly
     } catch (_error) {
       toast.error('An unexpected error occurred with Google login')
     } finally {
