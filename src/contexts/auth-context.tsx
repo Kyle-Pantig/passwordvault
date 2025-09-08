@@ -72,6 +72,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
             })
             if (!response.ok) {
               console.error('Session registration failed:', await response.text())
+            } else {
+              console.log('✅ Session registered successfully')
+              // Immediately validate session after registration
+              setTimeout(async () => {
+                try {
+                  const validateResponse = await fetch('/api/sessions/validate', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                  })
+                  if (!validateResponse.ok) {
+                    const errorData = await validateResponse.json()
+                    if (errorData.error === 'Session terminated - another session is active') {
+                      toast.error('Your session has been terminated because you signed in from another device.')
+                      await signOut()
+                    }
+                  }
+                } catch (error) {
+                  console.error('Session validation error:', error)
+                }
+              }, 1000) // Wait 1 second then validate
             }
           } catch (sessionError) {
             console.error('Failed to register session:', sessionError)
