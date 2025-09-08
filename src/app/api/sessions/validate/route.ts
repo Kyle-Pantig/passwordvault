@@ -52,30 +52,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if this is the most recent session
-    const { data: mostRecentSession, error: recentError } = await supabase
+    // Check if this is the most recent session by comparing timestamps
+    const { data: allSessions, error: recentError } = await supabase
       .from('user_sessions')
-      .select('session_id')
+      .select('session_id, last_activity, created_at')
       .eq('user_id', user.id)
       .order('last_activity', { ascending: false })
-      .limit(1)
-      .single()
 
     if (recentError) {
-      console.error('Error getting most recent session:', recentError)
+      console.error('Error getting sessions:', recentError)
       return NextResponse.json(
         { error: 'Failed to validate session' },
         { status: 500 }
       )
     }
 
-    if (mostRecentSession && mostRecentSession.session_id !== sessionIdFromToken) {
-      console.log('❌ API: Session is not the most recent - terminating')
-      await supabase.auth.signOut()
-      return NextResponse.json(
-        { error: 'Session terminated - another session is active' },
-        { status: 401 }
-      )
+    if (allSessions && allSessions.length > 1) {
+      // Find the current session in the list
+      const currentSession = allSessions.find(s => s.session_id === sessionIdFromToken)
+      const mostRecentSession = allSessions[0] // First one is most recent due to ordering
+      
+      console.log('🔍 API: Session comparison', {
+        currentSessionId: sessionIdFromToken,
+        currentLastActivity: currentSession?.last_activity,
+        mostRecentSessionId: mostRecentSession?.session_id,
+        mostRecentLastActivity: mostRecentSession?.last_activity,
+        totalSessions: allSessions.length
+      })
+
+      if (currentSession && mostRecentSession && currentSession.session_id !== mostRecentSession.session_id) {
+        // Only terminate if the current session is significantly older (more than 1 second)
+        const currentTime = new Date(currentSession.last_activity).getTime()
+        const mostRecentTime = new Date(mostRecentSession.last_activity).getTime()
+        const timeDiff = mostRecentTime - currentTime
+
+        if (timeDiff > 1000) { // More than 1 second difference
+          console.log('❌ API: Session is significantly older - terminating')
+          await supabase.auth.signOut()
+          return NextResponse.json(
+            { error: 'Session terminated - another session is active' },
+            { status: 401 }
+          )
+        } else {
+          console.log('✅ API: Sessions are too close in time - keeping both')
+        }
+      }
     }
 
     console.log('✅ API: Session is valid and most recent')

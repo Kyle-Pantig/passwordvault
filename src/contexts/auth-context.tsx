@@ -101,10 +101,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 }
               }
 
-              // Try validation multiple times with increasing delays
-              setTimeout(() => validateSession(1), 500)
-              setTimeout(() => validateSession(2), 2000)
-              setTimeout(() => validateSession(3), 5000)
+              // Try validation with a single delay to avoid race conditions
+              setTimeout(() => validateSession(1), 2000)
             }
           } catch (sessionError) {
             console.error('Failed to register session:', sessionError)
