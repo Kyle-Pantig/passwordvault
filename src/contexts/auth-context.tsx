@@ -74,26 +74,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
               console.error('Session registration failed:', await response.text())
             } else {
               console.log('✅ Session registered successfully')
-              // Immediately validate session after registration
-              setTimeout(async () => {
+              // Validate session after registration with multiple attempts
+              const validateSession = async (attempt = 1) => {
                 try {
+                  console.log(`🔍 Validating session (attempt ${attempt})...`)
                   const validateResponse = await fetch('/api/sessions/validate', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                     },
                   })
+                  
                   if (!validateResponse.ok) {
                     const errorData = await validateResponse.json()
+                    console.log('❌ Session validation failed:', errorData)
                     if (errorData.error === 'Session terminated - another session is active') {
                       toast.error('Your session has been terminated because you signed in from another device.')
                       await signOut()
+                      return
                     }
+                  } else {
+                    console.log('✅ Session validation passed')
                   }
                 } catch (error) {
                   console.error('Session validation error:', error)
                 }
-              }, 1000) // Wait 1 second then validate
+              }
+
+              // Try validation multiple times with increasing delays
+              setTimeout(() => validateSession(1), 500)
+              setTimeout(() => validateSession(2), 2000)
+              setTimeout(() => validateSession(3), 5000)
             }
           } catch (sessionError) {
             console.error('Failed to register session:', sessionError)

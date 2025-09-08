@@ -30,28 +30,55 @@ export async function POST(request: NextRequest) {
     const decodedToken = JSON.parse(atob(sessionId))
     const sessionIdFromToken = decodedToken.session_id
 
-    // Validate the session
-    const { data: isValid, error: validateError } = await supabase.rpc('validate_session', {
-      p_user_id: user.id,
-      p_session_id: sessionIdFromToken
+    console.log('🔍 API: Validating session', {
+      userId: user.id,
+      sessionId: sessionIdFromToken
     })
 
-    if (validateError) {
-      console.error('Error validating session:', validateError)
-      return NextResponse.json(
-        { error: 'Failed to validate session' },
-        { status: 500 }
-      )
-    }
+    // Check if this session exists in our database
+    const { data: sessionExists, error: checkError } = await supabase
+      .from('user_sessions')
+      .select('id, last_activity')
+      .eq('user_id', user.id)
+      .eq('session_id', sessionIdFromToken)
+      .single()
 
-    if (!isValid) {
-      // Session is not valid (expired or not most recent), sign out
+    if (checkError || !sessionExists) {
+      console.log('❌ API: Session not found in database')
       await supabase.auth.signOut()
       return NextResponse.json(
         { error: 'Session terminated - another session is active' },
         { status: 401 }
       )
     }
+
+    // Check if this is the most recent session
+    const { data: mostRecentSession, error: recentError } = await supabase
+      .from('user_sessions')
+      .select('session_id')
+      .eq('user_id', user.id)
+      .order('last_activity', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (recentError) {
+      console.error('Error getting most recent session:', recentError)
+      return NextResponse.json(
+        { error: 'Failed to validate session' },
+        { status: 500 }
+      )
+    }
+
+    if (mostRecentSession && mostRecentSession.session_id !== sessionIdFromToken) {
+      console.log('❌ API: Session is not the most recent - terminating')
+      await supabase.auth.signOut()
+      return NextResponse.json(
+        { error: 'Session terminated - another session is active' },
+        { status: 401 }
+      )
+    }
+
+    console.log('✅ API: Session is valid and most recent')
 
     return NextResponse.json({ valid: true })
   } catch (error) {
