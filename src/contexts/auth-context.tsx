@@ -60,69 +60,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(session?.user ?? null)
         setLoading(false)
         
-        // Register session for single session enforcement
-        if (event === 'SIGNED_IN' && session) {
-          try {
-            // Only register once per session
-            const response = await fetch('/api/sessions/register', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            if (!response.ok) {
-              console.error('Session registration failed:', await response.text())
-            } else {
-              console.log('✅ Session registered successfully')
-              // Validate session after registration with multiple attempts
-              const validateSession = async (attempt = 1) => {
-                try {
-                  console.log(`🔍 Validating session (attempt ${attempt})...`)
-                  const validateResponse = await fetch('/api/sessions/validate', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                  })
-                  
-                  if (!validateResponse.ok) {
-                    const errorData = await validateResponse.json()
-                    console.log('❌ Session validation failed:', errorData)
-                    if (errorData.error === 'Session terminated - another session is active') {
-                      toast.error('Your session has been terminated because you signed in from another device.')
-                      await signOut()
-                      return
-                    }
-                  } else {
-                    console.log('✅ Session validation passed')
-                  }
-                } catch (error) {
-                  console.error('Session validation error:', error)
-                }
-              }
-
-              // Try validation with a single delay to avoid race conditions
-              setTimeout(() => validateSession(1), 2000)
-            }
-          } catch (sessionError) {
-            console.error('Failed to register session:', sessionError)
-          }
-        }
-        
-        // Handle session termination
-        if (event === 'SIGNED_OUT') {
-          // Clean up any remaining session data
-          try {
-            await fetch('/api/sessions/cleanup', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-          } catch (cleanupError) {
-            console.error('Failed to cleanup sessions:', cleanupError)
-          }
-        }
       }
     )
 
@@ -149,20 +86,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
 
-      // Register the new session for single session enforcement
-      if (data.session) {
-        try {
-          await fetch('/api/sessions/register', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          })
-        } catch (sessionError) {
-          console.error('Failed to register session:', sessionError)
-          // Don't fail the sign-in if session registration fails
-        }
-      }
 
       return { success: true }
     } catch (error) {
@@ -330,27 +253,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(data.session)
         setUser(data.session?.user ?? null)
         
-        // Validate session after refresh
-        if (data.session) {
-          try {
-            const response = await fetch('/api/sessions/validate', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            
-            if (!response.ok) {
-              const errorData = await response.json()
-              if (errorData.error === 'Session terminated - another session is active') {
-                toast.error('Your session has been terminated because you signed in from another device.')
-                await signOut()
-              }
-            }
-          } catch (validationError) {
-            console.error('Session validation error:', validationError)
-          }
-        }
       }
     } catch (error) {
       console.error('Error refreshing session:', error)

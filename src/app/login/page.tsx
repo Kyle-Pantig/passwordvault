@@ -28,17 +28,6 @@ export default function LoginPage() {
     }
   }, [user, authLoading, router])
 
-  // Handle session termination error from URL params
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const error = urlParams.get('error')
-    
-    if (error === 'session_terminated') {
-      toast.error('Your session has been terminated because you signed in from another device.')
-      // Clean up the URL
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

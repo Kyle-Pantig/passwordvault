@@ -1,25 +1,21 @@
--- Drop user_sessions table and related policies
--- Run this in your Supabase SQL editor
+-- Drop user_sessions table and related functions
+-- Run this in your Supabase SQL editor to remove single session enforcement
 
 -- Drop the trigger first
-DROP TRIGGER IF EXISTS update_user_sessions_updated_at ON user_sessions;
+DROP TRIGGER IF EXISTS update_user_sessions_last_activity ON user_sessions;
 
--- Drop the function
-DROP FUNCTION IF EXISTS update_updated_at_column();
-
--- Drop the cleanup function
-DROP FUNCTION IF EXISTS cleanup_old_sessions();
-
--- Drop all policies on user_sessions table
-DROP POLICY IF EXISTS "Users can view their own sessions" ON user_sessions;
-DROP POLICY IF EXISTS "Users can insert their own sessions" ON user_sessions;
-DROP POLICY IF EXISTS "Users can update their own sessions" ON user_sessions;
-DROP POLICY IF EXISTS "Users can delete their own sessions" ON user_sessions;
+-- Drop the functions
+DROP FUNCTION IF EXISTS validate_session(UUID, TEXT);
+DROP FUNCTION IF EXISTS register_session(UUID, TEXT, TEXT, INET, TIMESTAMP WITH TIME ZONE);
+DROP FUNCTION IF EXISTS update_session_activity(TEXT);
+DROP FUNCTION IF EXISTS is_most_recent_session(UUID, TEXT);
+DROP FUNCTION IF EXISTS get_most_recent_session(UUID);
+DROP FUNCTION IF EXISTS terminate_old_sessions(UUID, TEXT);
+DROP FUNCTION IF EXISTS cleanup_expired_sessions();
+DROP FUNCTION IF EXISTS update_session_last_activity();
 
 -- Drop the table
 DROP TABLE IF EXISTS user_sessions;
 
--- Verify the table is dropped
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_name = 'user_sessions';
+-- Verify cleanup
+SELECT 'user_sessions table and functions have been removed' as status;
