@@ -60,25 +60,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(session?.user ?? null)
         setLoading(false)
         
-        // Enforce single session when a new session is detected
-        if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            const response = await fetch('/api/auth/single-session', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            
-            const sessionData = await response.json()
-            if (sessionData.revokedSessions > 0) {
-              console.log(`Revoked ${sessionData.revokedSessions} other active sessions`)
-              toast.info(`You have been logged out from ${sessionData.revokedSessions} other device(s)`)
-            }
-          } catch (sessionError) {
-            console.error('Error enforcing single session:', sessionError)
-          }
-        }
       }
     )
 
@@ -105,25 +86,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
 
-      // Enforce single session after successful login
-      if (data.user) {
-        try {
-          const response = await fetch('/api/auth/single-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          const sessionData = await response.json()
-          if (sessionData.revokedSessions > 0) {
-            console.log(`Revoked ${sessionData.revokedSessions} other active sessions`)
-          }
-        } catch (sessionError) {
-          console.error('Error enforcing single session:', sessionError)
-          // Don't fail the login if single session enforcement fails
-        }
-      }
 
       return { success: true }
     } catch (error) {

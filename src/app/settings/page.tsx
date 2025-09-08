@@ -45,8 +45,6 @@ export default function SettingsPage() {
   const [currentBackupCodes, setCurrentBackupCodes] = useState<string[]>([])
   const [showCurrentCodes, setShowCurrentCodes] = useState(false)
   const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false)
-  const [singleSessionEnabled, setSingleSessionEnabled] = useState(false)
-  const [autoLogoutEnabled, setAutoLogoutEnabled] = useState(true)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
@@ -401,85 +399,13 @@ export default function SettingsPage() {
   // Load user settings from database
   const loadSettings = async () => {
     try {
-      const response = await fetch('/api/settings', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setSingleSessionEnabled(data.settings.singleSessionEnabled)
-        setAutoLogoutEnabled(data.settings.autoLogoutEnabled)
-        setSettingsLoaded(true)
-      } else {
-        console.error('Failed to load settings:', data.error)
-        setSettingsLoaded(true) // Still set to true to show UI
-      }
+      setSettingsLoaded(true)
     } catch (error) {
       console.error('Error loading settings:', error)
       setSettingsLoaded(true) // Still set to true to show UI
     }
   }
 
-  // Save settings to database
-  const saveSettings = async (settings: {
-    singleSessionEnabled: boolean
-    autoLogoutEnabled: boolean
-  }) => {
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings),
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        toast.success('Settings saved successfully')
-      } else {
-        toast.error(data.error || 'Failed to save settings')
-      }
-    } catch (error) {
-      console.error('Error saving settings:', error)
-      toast.error('Failed to save settings')
-    }
-  }
-
-  // Update single session setting
-  const updateSingleSessionSetting = async (enabled: boolean) => {
-    setSingleSessionEnabled(enabled)
-    
-    const settings = {
-      singleSessionEnabled: enabled,
-      autoLogoutEnabled
-    }
-    
-    await saveSettings(settings)
-  }
-
-  // Update auto-logout settings
-  const updateAutoLogoutSettings = async (enabled: boolean) => {
-    setAutoLogoutEnabled(enabled)
-    
-    const settings = {
-      singleSessionEnabled,
-      autoLogoutEnabled: enabled
-    }
-    
-    await saveSettings(settings)
-    
-    // Notify auto-logout provider
-    const event = new CustomEvent('autoLogoutSettingsChange', {
-      detail: { type: 'autoLogout', settings: { enabled, timeoutMinutes: 30 } }
-    })
-    window.dispatchEvent(event)
-  }
 
   const confirmDeleteAccount = async () => {
     if (deleteConfirmationEmail !== user?.email) {
@@ -737,43 +663,6 @@ export default function SettingsPage() {
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
-
-              <Separator className="my-6" />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Single Session Mode</Label>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Logout from other devices when signing in from a new browser
-                  </p>
-                </div>
-                <Switch
-                  checked={singleSessionEnabled}
-                  onCheckedChange={updateSingleSessionSetting}
-                  disabled={!settingsLoaded}
-                  className="cursor-pointer"
-                />
-              </div>
-
-              <Separator className="my-6" />
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Auto Logout</Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Automatically logout after period of inactivity for security
-                    </p>
-                  </div>
-                  <Switch
-                    checked={autoLogoutEnabled}
-                    onCheckedChange={updateAutoLogoutSettings}
-                    disabled={!settingsLoaded}
-                    className="cursor-pointer"
-                  />
-                </div>
-
-              </div>
 
               <Separator className="my-6" />
 

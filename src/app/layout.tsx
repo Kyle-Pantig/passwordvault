@@ -5,8 +5,6 @@ import { Toaster } from "@/components/ui/sonner";
 import NavbarLayout from "@/components/layout/navbar-layout";
 import { DarkModeProvider } from "@/contexts/dark-mode-context";
 import { AuthProvider } from "@/contexts/auth-context";
-import { AutoLogoutProvider } from "@/components/auto-logout-provider";
-import { SingleSessionProvider } from "@/components/single-session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -133,13 +131,9 @@ export default function RootLayout({
       >
         <AuthProvider>
           <DarkModeProvider>
-            <SingleSessionProvider>
-              <AutoLogoutProvider>
-                <NavbarLayout>
-                  {children}
-                </NavbarLayout>
-              </AutoLogoutProvider>
-            </SingleSessionProvider>
+            <NavbarLayout>
+              {children}
+            </NavbarLayout>
           </DarkModeProvider>
         </AuthProvider>
         <Toaster />
