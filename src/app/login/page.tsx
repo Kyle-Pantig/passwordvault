@@ -19,6 +19,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [rateLimited, setRateLimited] = useState(false)
+  const [lockoutTime, setLockoutTime] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState<string | null>(null)
+  const [isLocked, setIsLocked] = useState(false) // true for 6+ attempts, false for 3-5 attempts
   const router = useRouter()
   const { user, loading: authLoading, signIn, signInWithGoogle, check2FAStatus } = useAuth()
 
@@ -28,15 +32,101 @@ export default function LoginPage() {
     }
   }, [user, authLoading, router])
 
+  // Check for existing rate limiting on page load (for persistence on reload)
+  useEffect(() => {
+    const checkExistingRateLimit = async () => {
+      try {
+        const response = await fetch('/api/admin/rate-limit-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.isBlocked) {
+            setRateLimited(true)
+            const isLocked = data.error?.includes('locked due to too many attempts') || false
+            setIsLocked(isLocked)
+            
+            if (data.lockoutUntil) {
+              setLockoutTime(data.lockoutUntil)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check rate limit status:', error)
+      }
+    }
+
+    if (email) {
+      checkExistingRateLimit()
+    }
+  }, [email])
+
+  // Countdown effect for lockout
+  useEffect(() => {
+    if (!lockoutTime) {
+      setCountdown(null)
+      return
+    }
+
+    const updateCountdown = () => {
+      const now = new Date().getTime()
+      const lockout = new Date(lockoutTime).getTime()
+      const timeLeft = lockout - now
+
+      if (timeLeft <= 0) {
+        setCountdown(null)
+        setRateLimited(false)
+        setLockoutTime(null)
+        return
+      }
+
+      const minutes = Math.floor(timeLeft / (1000 * 60))
+      const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+
+      if (minutes > 0) {
+        setCountdown(`${minutes}m ${seconds}s`)
+      } else {
+        setCountdown(`${seconds}s`)
+      }
+    }
+
+    // Update immediately
+    updateCountdown()
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [lockoutTime])
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setRateLimited(false)
+    setLockoutTime(null)
 
     try {
       const result = await signIn(email, password)
 
       if (!result.success) {
+        // Handle rate limiting
+        if (result.rateLimited) {
+          setRateLimited(true)
+          
+          // Determine if it's locked (6+ attempts) or just disabled (3-5 attempts)
+          const isLocked = result.error?.includes('locked due to too many attempts') || false
+          setIsLocked(isLocked)
+          
+          // Use the actual lockout time from the API response
+          if (result.lockoutUntil) {
+            setLockoutTime(result.lockoutUntil)
+          }
+        }
+        
         toast.error(result.error || 'Login failed')
         return
       }
@@ -151,9 +241,27 @@ export default function LoginPage() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" className="w-full" disabled={loading || rateLimited}>
+              {loading ? 'Signing in...' : rateLimited ? (isLocked ? 'Account Locked' : 'Account Temporarily Disabled') : 'Sign In'}
             </Button>
+            
+            {/* Rate Limiting Feedback */}
+            {rateLimited && (
+              <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                <div className="flex items-center">
+                  <Shield className="h-4 w-4 text-red-500 mr-2" />
+                  <div className="text-sm text-red-700 dark:text-red-300">
+                    <p className="font-medium">
+                      {isLocked ? 'Account locked due to too many attempts' : 'Account temporarily disabled'}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {countdown ? `Try again in ${countdown}` : 'Please try again later'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
           </form>
           
           {/* Divider */}

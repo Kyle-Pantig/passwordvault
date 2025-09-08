@@ -9,7 +9,13 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  signIn: (email: string, password: string) => Promise<{ 
+    success: boolean; 
+    error?: string; 
+    rateLimited?: boolean; 
+    remainingAttempts?: number;
+    lockoutUntil?: string;
+  }>
   signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
@@ -69,23 +75,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      
+      // Use rate-limited login API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       })
 
-      if (error) {
-        return { success: false, error: error.message }
-      }
+      const result = await response.json()
 
-      if (data.user && !data.user.email_confirmed_at) {
-        await supabase.auth.signOut()
+      if (!result.success) {
         return { 
           success: false, 
-          error: 'Please verify your email before signing in. Check your inbox for a verification link.' 
+          error: result.error,
+          rateLimited: result.rateLimited,
+          remainingAttempts: result.remainingAttempts,
+          lockoutUntil: result.lockoutUntil
         }
       }
 
+      // Update local auth state with the successful login
+      if (result.user && result.session) {
+        setUser(result.user)
+        setSession(result.session)
+      }
 
       return { success: true }
     } catch (error) {
