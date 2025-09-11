@@ -4,6 +4,7 @@ export interface AdvancedCredentialField {
   value: string
   isVisible: boolean
   showValue?: boolean
+  isMasked?: boolean
 }
 
 export type CredentialType = 'basic' | 'advanced'
