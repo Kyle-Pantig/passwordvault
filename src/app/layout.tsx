@@ -60,7 +60,7 @@ export const metadata: Metadata = {
       {
         url: "/og-image.png",
         width: 1200,
-        height: 630,
+        height: 600,
         alt: "DigiVault - Secure Password Manager & Digital Vault",
       },
     ],
@@ -83,9 +83,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
-  },
-  verification: {
-    google: "your-google-verification-code",
   },
   alternates: {
     canonical: "https://digivault.vercel.app",
