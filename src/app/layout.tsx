@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://digivault.vercel.app"),
+  metadataBase: new URL("https://digivault-sand.vercel.app"),
   keywords: [
     "password manager",
     "secure passwords",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     title: "DigiVault | Secure Password Manager & Digital Vault",
     description:
       "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
-    url: "https://digivault.vercel.app",
+    url: "https://digivault-sand.vercel.app",
     siteName: "DigiVault",
     type: "website",
     locale: "en_US",
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://digivault.vercel.app",
+    canonical: "https://digivault-sand.vercel.app",
   },
 };
 
@@ -105,7 +105,7 @@ export default function RootLayout({
         <meta name="google-adsense-account" content="ca-pub-3057643117380889" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link rel="canonical" href="https://digivault.vercel.app" />
+        <link rel="canonical" href="https://digivault-sand.vercel.app" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
