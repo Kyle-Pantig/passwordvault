@@ -3,8 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import NavbarLayout from "@/components/layout/navbar-layout";
+import { Footer } from "@/components/layout/footer";
 import { DarkModeProvider } from "@/contexts/dark-mode-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import { LoadingWrapper } from "@/components/loading-wrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://passwordvault.vercel.app"),
+  metadataBase: new URL("https://digivault.vercel.app"),
   keywords: [
     "password manager",
     "secure passwords",
@@ -41,17 +43,17 @@ export const metadata: Metadata = {
     "password encryption",
   ],
   title: {
-    default: "Password Vault | Secure Password Manager & Digital Vault",
-    template: `%s | Password Vault | Secure Password Manager & Digital Vault`,
+    default: "DigiVault | Secure Password Manager & Digital Vault",
+    template: `%s | DigiVault | Secure Password Manager & Digital Vault`,
   },
   description:
-    "Password Vault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
+    "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
   openGraph: {
-    title: "Password Vault | Secure Password Manager & Digital Vault",
+    title: "DigiVault | Secure Password Manager & Digital Vault",
     description:
-      "Password Vault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
-    url: "https://passwordvault-pi.vercel.app",
-    siteName: "Password Vault",
+      "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
+    url: "https://digivault.vercel.app",
+    siteName: "DigiVault",
     type: "website",
     locale: "en_US",
     images: [
@@ -59,16 +61,16 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Password Vault - Secure Password Manager & Digital Vault",
+        alt: "DigiVault - Secure Password Manager & Digital Vault",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    site: "@passwordvault",
-    title: "Password Vault | Secure Password Manager & Digital Vault",
+    site: "@digivault",
+    title: "DigiVault | Secure Password Manager & Digital Vault",
     description:
-      "Password Vault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
+      "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -86,7 +88,7 @@ export const metadata: Metadata = {
     google: "your-google-verification-code",
   },
   alternates: {
-    canonical: "https://passwordvault-pi.vercel.app",
+    canonical: "https://digivault.vercel.app",
   },
 };
 
@@ -106,7 +108,7 @@ export default function RootLayout({
         <meta name="google-adsense-account" content="ca-pub-3057643117380889" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link rel="canonical" href="https://passwordvault-pi.vercel.app" />
+        <link rel="canonical" href="https://digivault.vercel.app" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -131,9 +133,14 @@ export default function RootLayout({
       >
         <AuthProvider>
           <DarkModeProvider>
-            <NavbarLayout>
-              {children}
-            </NavbarLayout>
+            <LoadingWrapper>
+              <div className="min-h-screen flex flex-col">
+                <NavbarLayout>
+                  {children}
+                </NavbarLayout>
+                <Footer />
+              </div>
+            </LoadingWrapper>
           </DarkModeProvider>
         </AuthProvider>
         <Toaster />

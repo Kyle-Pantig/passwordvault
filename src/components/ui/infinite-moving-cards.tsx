@@ -88,7 +88,7 @@ export const InfiniteMovingCards = ({
           pauseOnHover && "hover:[animation-play-state:paused]",
         )}
       >
-        {items.map((item, _idx) => {
+        {items.map((item) => {
           const IconComponent = (item as { icon?: React.ComponentType<{ className?: string }> }).icon;
           return (
             <li

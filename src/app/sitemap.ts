@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = "https://passwordvault-pi.vercel.app"; 
+    const baseUrl = "https://digivault.vercel.app"; 
 
     return [
         {

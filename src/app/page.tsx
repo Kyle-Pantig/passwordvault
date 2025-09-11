@@ -4,22 +4,24 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { db } from '@/lib/database'
-import { Credential } from '@/lib/types'
+import { Credential, CredentialType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Eye, EyeOff, Copy, Edit, Trash2, MoreVertical, ExternalLink, Shield, Download, FileText, Lock, AlertTriangle, AlertCircle, Zap, Smartphone, BarChart3, Database, RefreshCw, HardDrive, Search } from 'lucide-react'
+import { Plus, Eye, EyeOff, Trash2, Shield, Download, FileText, Lock, AlertTriangle, AlertCircle, Zap, Smartphone, BarChart3, Database, RefreshCw, HardDrive, Search } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { LoaderThree } from '@/components/ui/loader'
 import { analyzePasswordRisk, PasswordRiskAnalysis } from '@/lib/password-risk-analysis'
-// import { Spotlight } from '@/components/ui/spotlight-new'
 import { InfiniteMovingCards } from '@/components/ui/infinite-moving-cards'
 import { motion } from 'motion/react'
 import Image from 'next/image'
+import { DynamicCredentialCard } from '@/components/ui/dynamic-credential-card'
+import { Textarea } from '@/components/ui/textarea'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 // Predefined service options with URLs
 const SERVICE_OPTIONS = [
@@ -51,8 +53,8 @@ const SERVICE_OPTIONS = [
 // Define fallback services for favicon loading
 const FAVICON_SERVICES: Array<'duckduckgo' | 'faviconio' | 'direct'> = ['duckduckgo', 'faviconio', 'direct']
 
-// Password Vault features for the infinite moving cards
-const PASSWORD_VAULT_FEATURES = [
+// DigiVault features for the infinite moving cards
+const DIGIVAULT_FEATURES = [
   {
     quote: "Advanced 256-bit AES encryption ensures your passwords are protected with military-grade security standards.",
     name: "Military-Grade Encryption",
@@ -129,9 +131,51 @@ export default function VaultPage() {
   const [formData, setFormData] = useState({
     service_name: '',
     service_url: '',
+    credential_type: 'basic' as CredentialType,
     username: '',
-    password: ''
+    password: '',
+    custom_fields: [] as any[],
+    notes: ''
   })
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({
+    serviceName: false,
+    customFields: false
+  })
+
+  // Individual masking state for each custom field is now stored in the field object
+
+  // Validation function for custom fields
+  const validateCustomFields = () => {
+    const errors = {
+      serviceName: false,
+      customFields: false
+    }
+
+    // Check if service name is selected
+    if (!formData.service_name || formData.service_name === '') {
+      errors.serviceName = true
+    }
+
+    // Check custom fields validation
+    if (formData.credential_type === 'advanced') {
+      if (formData.custom_fields.length === 0) {
+        errors.customFields = true
+      } else {
+        // Check if any custom field has no value
+        const hasEmptyField = formData.custom_fields.some(field => 
+          !field.name || field.name.trim() === '' || !field.value || field.value.trim() === ''
+        )
+        if (hasEmptyField) {
+          errors.customFields = true
+        }
+      }
+    }
+
+    setValidationErrors(errors)
+    return !errors.serviceName && !errors.customFields
+  }
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -156,12 +200,20 @@ export default function VaultPage() {
 
   const handleAddCredential = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate form before submission
+    if (!validateCustomFields()) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+    
     try {
       await db.createCredential(formData)
       toast.success('Credential added successfully!')
       setIsAddDialogOpen(false)
-      // Clear form data
-      setFormData({ service_name: '', service_url: '', username: '', password: '' })
+      // Clear form data and validation errors
+      setFormData({ service_name: '', service_url: '', credential_type: 'basic', username: '', password: '', custom_fields: [], notes: '' })
+      setValidationErrors({ serviceName: false, customFields: false })
       loadCredentials()
     } catch (_error) {
       toast.error('Failed to add credential')
@@ -179,12 +231,28 @@ export default function VaultPage() {
       setCustomServiceName('')
       setFormData({ ...formData, service_name: selectedService.name, service_url: selectedService.url })
     }
+    // Clear validation errors when service is selected
+    setValidationErrors(prev => ({ ...prev, serviceName: false }))
+  }
+
+  const handleCredentialTypeChange = (type: CredentialType) => {
+    setFormData({ 
+      ...formData, 
+      credential_type: type,
+      // Clear fields when switching types
+      username: type === 'basic' ? formData.username : '',
+      password: type === 'basic' ? formData.password : '',
+      custom_fields: type === 'advanced' ? formData.custom_fields : []
+    })
+    // Clear validation errors when credential type changes
+    setValidationErrors({ serviceName: false, customFields: false })
   }
 
   const handleCustomServiceChange = (value: string) => {
     setCustomServiceName(value)
     setFormData({ ...formData, service_name: value })
   }
+
 
   // const getFaviconUrl = (url: string): string => {
   //   try {
@@ -236,7 +304,6 @@ export default function VaultPage() {
   const ServiceIcon = ({ credential }: { credential: Credential }) => {
     const [imageError, setImageError] = useState(false)
     const [currentSrc, setCurrentSrc] = useState('')
-    const [_isLoading, setIsLoading] = useState(true)
     const [currentServiceIndex, setCurrentServiceIndex] = useState(0)
 
     useEffect(() => {
@@ -245,14 +312,11 @@ export default function VaultPage() {
         if (faviconUrl) {
           setCurrentSrc(faviconUrl)
           setImageError(false)
-          setIsLoading(false)
         } else {
           setImageError(true)
-          setIsLoading(false)
         }
       } else {
         setImageError(true)
-        setIsLoading(false)
       }
     }, [credential.service_url, currentServiceIndex])
 
@@ -302,7 +366,7 @@ export default function VaultPage() {
 
   const handleOpenAddDialog = () => {
     // Clear form data when opening the dialog
-    setFormData({ service_name: '', service_url: '', username: '', password: '' })
+    setFormData({ service_name: '', service_url: '', credential_type: 'basic', username: '', password: '', custom_fields: [], notes: '' })
     setIsCustomService(false)
     setCustomServiceName('')
     setShowAddPassword(false)
@@ -318,7 +382,7 @@ export default function VaultPage() {
       toast.success('Credential updated successfully!')
       setIsEditDialogOpen(false)
       setEditingCredential(null)
-      setFormData({ service_name: '', service_url: '', username: '', password: '' })
+      setFormData({ service_name: '', service_url: '', credential_type: 'basic', username: '', password: '', custom_fields: [], notes: '' })
       loadCredentials()
     } catch (_error) {
       toast.error('Failed to update credential')
@@ -397,7 +461,7 @@ export default function VaultPage() {
     const jsonString = JSON.stringify(exportData, null, 2)
     const encrypted = btoa(jsonString) // Base64 encoding as simple encryption
     
-    return `PASSWORD_VAULT_EXPORT:${encrypted}`
+    return `DIGIVAULT_EXPORT:${encrypted}`
   }
 
   const downloadFile = (content: string, filename: string, mimeType: string) => {
@@ -428,17 +492,17 @@ export default function VaultPage() {
       switch (exportFormat) {
         case 'csv':
           content = exportToCSV(credentials)
-          filename = `password-vault-export-${timestamp}.csv`
+          filename = `digivault-export-${timestamp}.csv`
           mimeType = 'text/csv'
           break
         case 'json':
           content = exportToJSON(credentials)
-          filename = `password-vault-export-${timestamp}.json`
+          filename = `digivault-export-${timestamp}.json`
           mimeType = 'application/json'
           break
         case 'encrypted':
           content = await exportToEncrypted(credentials)
-          filename = `password-vault-export-${timestamp}.txt`
+          filename = `digivault-export-${timestamp}.txt`
           mimeType = 'text/plain'
           break
         default:
@@ -457,14 +521,6 @@ export default function VaultPage() {
   }
 
 
-  const copyToClipboard = async (text: string, type: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast.success(`${type} copied to clipboard!`)
-    } catch (_error) {
-      toast.error('Failed to copy to clipboard')
-    }
-  }
 
   const togglePasswordVisibility = (id: string) => {
     const newVisible = new Set(visiblePasswords)
@@ -481,8 +537,11 @@ export default function VaultPage() {
     setFormData({
       service_name: credential.service_name,
       service_url: credential.service_url || '',
-      username: credential.username,
-      password: credential.password
+      credential_type: credential.credential_type,
+      username: credential.username || '',
+      password: credential.password || '',
+      custom_fields: credential.custom_fields || [],
+      notes: credential.notes || ''
     })
     // Check if the service name is in our predefined list
     const isPredefinedService = SERVICE_OPTIONS.slice(0, -1).some(service => service.name === credential.service_name)
@@ -490,6 +549,20 @@ export default function VaultPage() {
     setCustomServiceName(isPredefinedService ? '' : credential.service_name)
     setShowEditPassword(false)
     setIsEditDialogOpen(true)
+  }
+
+  // Helper function to mask email addresses
+  const maskEmail = (email: string) => {
+    if (!email || !email.includes('@')) return email
+    
+    const [localPart, domain] = email.split('@')
+    if (localPart.length <= 2) return email
+    
+    const firstChar = localPart[0]
+    const lastChar = localPart[localPart.length - 1]
+    const maskedMiddle = '*'.repeat(Math.max(1, localPart.length - 2))
+    
+    return `${firstChar}${maskedMiddle}${lastChar}@${domain}`
   }
 
   // Helper function to check if a credential has security issues
@@ -511,7 +584,7 @@ export default function VaultPage() {
   const filteredCredentials = credentials
     .filter(cred =>
       cred.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cred.username.toLowerCase().includes(searchTerm.toLowerCase())
+      (cred.username || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       // Prioritize credentials with security issues
@@ -558,7 +631,7 @@ export default function VaultPage() {
               }}
               className="relative z-10 mx-auto max-w-4xl text-center text-2xl font-bold text-slate-300 md:text-4xl lg:text-7xl dark:text-slate-300"
             >
-              {"Secure your passwords with Password Vault"}
+              {"Secure your passwords with DigiVault"}
             </motion.h1>
             <motion.p
               initial={{
@@ -624,14 +697,14 @@ export default function VaultPage() {
             >
               <div className="text-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                  Why Choose Password Vault?
+                  Why Choose DigiVault?
                 </h2>
                 <p className="text-gray-400 max-w-2xl mx-auto">
                   Advanced security features designed to protect your digital life with cutting-edge technology
                 </p>
               </div>
               <InfiniteMovingCards
-                items={PASSWORD_VAULT_FEATURES}
+                items={DIGIVAULT_FEATURES}
                 direction="left"
                 speed="slow"
                 className="max-w-7xl mx-auto"
@@ -691,7 +764,7 @@ export default function VaultPage() {
                     {/* Copyright */}
                     <div className="text-center border-t border-gray-700 dark:border-gray-600 pt-4">
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        © {new Date().getFullYear()} Password Vault. All rights reserved.
+                        © {new Date().getFullYear()} DigiVault. All rights reserved.
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
                         Built with security in mind
@@ -744,7 +817,7 @@ export default function VaultPage() {
               setIsAddDialogOpen(open)
               if (open) {
                 // Clear form when dialog opens
-                setFormData({ service_name: '', service_url: '', username: '', password: '' })
+                setFormData({ service_name: '', service_url: '', credential_type: 'basic', username: '', password: '', custom_fields: [], notes: '' })
                 setIsCustomService(false)
                 setCustomServiceName('')
                 setShowAddPassword(false)
@@ -756,90 +829,255 @@ export default function VaultPage() {
                   Add Credential
                 </Button>
               </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle>Add New Credential</DialogTitle>
                 <DialogDescription>
                   Add a new service credential to your vault
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleAddCredential} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="service_name">Service Name</Label>
-                  <Select onValueChange={handleServiceSelect} value={isCustomService ? 'Custom' : formData.service_name}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a service or choose Custom" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto z-50" position="popper" side="bottom" align="start">
-                      {SERVICE_OPTIONS.map((service) => (
-                        <SelectItem key={service.name} value={service.name}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isCustomService && (
-                    <Input
-                      placeholder="Enter custom service name"
-                      value={customServiceName}
-                      onChange={(e) => handleCustomServiceChange(e.target.value)}
-                      required
-                    />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="service_url">Service URL (optional)</Label>
-                  <Input
-                    id="service_url"
-                    placeholder="https://www.messenger.com/"
-                    value={formData.service_url}
-                    onChange={(e) => setFormData({ ...formData, service_url: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username/Email</Label>
-                  <Input
-                    id="username"
-                    placeholder="Enter username or email"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    required
-                  />
-                </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
+              <ScrollArea className={`max-h-[60vh] ${formData.custom_fields.length > 0 ? 'pr-4' : ''}`}>
+                <form id="add-credential-form" onSubmit={handleAddCredential} className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="credential_type">Credential Type</Label>
+                      <Select value={formData.credential_type} onValueChange={handleCredentialTypeChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select credential type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="basic">Basic (Username/Password)</SelectItem>
+                          <SelectItem value="advanced">Advanced (Custom Fields)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="service_name">Service Name</Label>
+                      <Select onValueChange={handleServiceSelect} value={isCustomService ? 'Custom' : formData.service_name}>
+                        <SelectTrigger className={validationErrors.serviceName ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500' : ''}>
+                          <SelectValue placeholder="Select a service or choose Custom" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto z-50" position="popper" side="bottom" align="start">
+                          {SERVICE_OPTIONS.map((service) => (
+                            <SelectItem key={service.name} value={service.name}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isCustomService && (
+                        <Input
+                          placeholder="Enter custom service name"
+                          value={customServiceName}
+                          onChange={(e) => handleCustomServiceChange(e.target.value)}
+                          required
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="service_url">Service URL (optional)</Label>
                       <Input
-                        id="password"
-                        type={showAddPassword ? "text" : "password"}
-                        placeholder="Enter password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
-                        className="pr-10"
+                        id="service_url"
+                        placeholder="https://www.messenger.com/"
+                        value={formData.service_url}
+                        onChange={(e) => setFormData({ ...formData, service_url: e.target.value })}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowAddPassword(!showAddPassword)}
-                      >
-                        {showAddPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
+                    </div>
+
+                    {formData.credential_type === 'basic' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username/Email</Label>
+                          <Input
+                            id="username"
+                            placeholder="Enter username or email"
+                            value={formData.username}
+                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="password">Password</Label>
+                          <div className="relative">
+                            <Input
+                              id="password"
+                              type={showAddPassword ? "text" : "password"}
+                              placeholder="Enter password"
+                              value={formData.password}
+                              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                              required
+                              className="pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                              onClick={() => setShowAddPassword(!showAddPassword)}
+                            >
+                              {showAddPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {formData.credential_type === 'advanced' && (
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="text-lg font-semibold">Custom Fields</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Add custom fields for your advanced credentials (API keys, tokens, etc.)
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          {formData.custom_fields.map((field, index) => (
+                            <div key={field.id || index} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-1">
+                                  <Label htmlFor={`mask-toggle-${index}`} className="text-xs text-gray-600">
+                                    Mask
+                                  </Label>
+                                  <Switch
+                                    id={`mask-toggle-${index}`}
+                                    checked={field.isMasked}
+                                    onCheckedChange={(checked) => {
+                                      const newFields = [...formData.custom_fields]
+                                      newFields[index] = { ...field, isMasked: checked, showValue: checked ? field.showValue : true }
+                                      setFormData({ ...formData, custom_fields: newFields })
+                                    }}
+                                    className="scale-75"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newFields = formData.custom_fields.filter((_, i) => i !== index)
+                                    setFormData({ ...formData, custom_fields: newFields })
+                                    // Clear validation errors when field is removed
+                                    setValidationErrors(prev => ({ ...prev, customFields: false }))
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="relative">
+                                <Input
+                                  placeholder="(e.g., API Key, Token)"
+                                  value={field.isMasked ? (field.showValue ? field.name : '•'.repeat(Math.max(field.name.length, 1))) : field.name}
+                                  onChange={(e) => {
+                                    const newFields = [...formData.custom_fields]
+                                    if (field.isMasked) {
+                                      if (field.showValue) {
+                                        // When visible, update normally
+                                        newFields[index] = { ...field, name: e.target.value, value: e.target.value }
+                                      } else {
+                                        // When hidden, we need to handle this differently
+                                        // The input shows dots, but we need to track the actual changes
+                                        const currentLength = field.name.length
+                                        const inputLength = e.target.value.length
+                                        
+                                        if (inputLength > currentLength) {
+                                          // User is adding characters
+                                          const newChar = e.target.value.slice(-1)
+                                          newFields[index] = { ...field, name: field.name + newChar, value: field.name + newChar }
+                                        } else if (inputLength < currentLength) {
+                                          // User is deleting characters
+                                          const newValue = field.name.slice(0, inputLength)
+                                          newFields[index] = { ...field, name: newValue, value: newValue }
+                                        }
+                                      }
+                                    } else {
+                                      // When masking is disabled, update normally
+                                      newFields[index] = { ...field, name: e.target.value, value: e.target.value }
+                                    }
+                                    setFormData({ ...formData, custom_fields: newFields })
+                                    // Clear validation errors when field is updated
+                                    setValidationErrors(prev => ({ ...prev, customFields: false }))
+                                  }}
+                                  className={`${field.isMasked ? 'pr-20' : 'pr-10'} ${validationErrors.customFields ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500' : ''}`}
+                                />
+                                {field.isMasked && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newFields = [...formData.custom_fields]
+                                      newFields[index] = { ...field, showValue: !field.showValue }
+                                      setFormData({ ...formData, custom_fields: newFields })
+                                    }}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+                                  >
+                                    {field.showValue ? (
+                                      <EyeOff className="h-4 w-4 text-gray-400" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newField = {
+                                id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                name: '',
+                                value: '',
+                                isVisible: true,
+                                showValue: true,
+                                isMasked: true
+                              }
+                              setFormData({ ...formData, custom_fields: [...formData.custom_fields, newField] })
+                            }}
+                            className={`w-full ${validationErrors.customFields && formData.custom_fields.length === 0 ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500' : ''}`}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Field
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Add any additional notes about this credential
+                        </p>
+                      </div>
+                      <Textarea
+                        id="notes"
+                        placeholder="Add any additional notes about this credential..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="overflow-y-auto whitespace-pre-wrap break-words"
+                        rows={3}
+                        style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                      />
                     </div>
                   </div>
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Add Credential</Button>
-                </div>
-              </form>
+
+                </form>
+              </ScrollArea>
+              
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" form="add-credential-form">Add Credential</Button>
+              </div>
             </DialogContent>
           </Dialog>
           </div>
@@ -926,7 +1164,7 @@ export default function VaultPage() {
                     {riskAnalysis.weakPasswords.slice(0, 2).map((weak, index) => (
                       <div key={index} className="flex items-center justify-between text-sm">
                         <span className="text-gray-700 dark:text-gray-300">
-                          {weak.service_name} ({weak.username})
+                          {weak.service_name} ({maskEmail(weak.username)})
                         </span>
                         <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs">
                           {weak.strength.replace('-', ' ').toUpperCase()}
@@ -967,128 +1205,19 @@ export default function VaultPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
             {filteredCredentials.map((credential) => {
               const securityIssues = getCredentialSecurityIssues(credential)
               return (
-              <Card key={credential.id} className={`hover:shadow-lg transition-shadow ${
-                securityIssues.isWeak ? 'border-l-4 border-l-red-500' : 
-                securityIssues.isReused ? 'border-l-4 border-l-orange-500' : ''
-              }`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <ServiceIcon credential={credential} />
-                      <div className="flex-1">
-                        {credential.service_url && credential.service_url.trim() !== '' ? (
-                          <a
-                            href={credential.service_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline transition-all duration-200 cursor-pointer flex items-center gap-1 group hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded"
-                            title={`Visit ${credential.service_name}`}
-                          >
-                            {credential.service_name}
-                            <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                          </a>
-                        ) : (
-                          <CardTitle className="text-lg">{credential.service_name}</CardTitle>
-                        )}
-                        
-                        {/* Security Indicators */}
-                        <div className="flex items-center gap-2 mt-1">
-                          {securityIssues.isWeak && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium">
-                              <AlertTriangle className="h-3 w-3" />
-                              {securityIssues.strength?.replace('-', ' ').toUpperCase() || 'WEAK'}
-                            </span>
-                          )}
-                          {securityIssues.isReused && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded text-xs font-medium">
-                              <AlertCircle className="h-3 w-3" />
-                              REUSED
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(credential)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => openDeleteDialog(credential)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-sm text-gray-500 dark:text-gray-400">Username/Email</Label>
-                    <div className="relative mt-1">
-                      <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-mono px-3 py-2 flex-1 min-h-[40px] flex items-center">
-                          {credential.username}
-                        </p>
-                        <div className="flex items-center border-l border-gray-200 dark:border-gray-700">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-none rounded-r"
-                            onClick={() => copyToClipboard(credential.username, 'Username')}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-gray-500 dark:text-gray-400">Password</Label>
-                    <div className="relative mt-1">
-                      <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-mono px-3 py-2 flex-1 min-h-[40px] flex items-center">
-                          {visiblePasswords.has(credential.id) ? credential.password : '••••••••'}
-                        </p>
-                        <div className="flex items-center border-l border-gray-200 dark:border-gray-700">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-none"
-                            onClick={() => togglePasswordVisibility(credential.id)}
-                          >
-                            {visiblePasswords.has(credential.id) ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-none rounded-r"
-                            onClick={() => copyToClipboard(credential.password, 'Password')}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <DynamicCredentialCard
+                  key={credential.id}
+                  credential={credential}
+                  onEdit={openEditDialog}
+                  onDelete={openDeleteDialog}
+                  visiblePasswords={visiblePasswords}
+                  onTogglePasswordVisibility={togglePasswordVisibility}
+                  securityIssues={securityIssues}
+                />
               )
             })}
           </div>
@@ -1104,197 +1233,268 @@ export default function VaultPage() {
             setShowEditPassword(false)
           }
         }}>
-          <DialogContent>
+          <DialogContent className="max-h-[80vh]">
             <DialogHeader>
               <DialogTitle>Edit Credential</DialogTitle>
               <DialogDescription>
                 Update the credential information
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleEditCredential} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit_service_name">Service Name</Label>
-                <Select onValueChange={handleServiceSelect} value={isCustomService ? 'Custom' : formData.service_name}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a service or choose Custom" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto z-50" position="popper" side="bottom" align="start">
-                    {SERVICE_OPTIONS.map((service) => (
-                      <SelectItem key={service.name} value={service.name}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isCustomService && (
-                  <Input
-                    placeholder="Enter custom service name"
-                    value={customServiceName}
-                    onChange={(e) => handleCustomServiceChange(e.target.value)}
-                    required
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_service_url">Service URL (optional)</Label>
-                <Input
-                  id="edit_service_url"
-                  placeholder="https://www.messenger.com/"
-                  value={formData.service_url}
-                  onChange={(e) => setFormData({ ...formData, service_url: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_username">Username/Email</Label>
-                <Input
-                  id="edit_username"
-                  placeholder="Enter username or email"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                />
-              </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_password">Password</Label>
-                  <div className="relative">
+            <ScrollArea className={`max-h-[60vh] ${formData.custom_fields.length > 0 ? 'pr-4' : ''}`}>
+              <form id="edit-credential-form" onSubmit={handleEditCredential} className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_credential_type">Credential Type</Label>
+                    <Select value={formData.credential_type} onValueChange={handleCredentialTypeChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select credential type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">Basic (Username/Password)</SelectItem>
+                        <SelectItem value="advanced">Advanced (Custom Fields)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_service_name">Service Name</Label>
+                    <Select onValueChange={handleServiceSelect} value={isCustomService ? 'Custom' : formData.service_name}>
+                      <SelectTrigger className={validationErrors.serviceName ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500' : ''}>
+                        <SelectValue placeholder="Select a service or choose Custom" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto z-50" position="popper" side="bottom" align="start">
+                        {SERVICE_OPTIONS.map((service) => (
+                          <SelectItem key={service.name} value={service.name}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isCustomService && (
+                      <Input
+                        placeholder="Enter custom service name"
+                        value={customServiceName}
+                        onChange={(e) => handleCustomServiceChange(e.target.value)}
+                        required
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_service_url">Service URL (optional)</Label>
                     <Input
-                      id="edit_password"
-                      type={showEditPassword ? "text" : "password"}
-                      placeholder="Enter password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      className="pr-10"
+                      id="edit_service_url"
+                      placeholder="https://www.messenger.com/"
+                      value={formData.service_url}
+                      onChange={(e) => setFormData({ ...formData, service_url: e.target.value })}
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowEditPassword(!showEditPassword)}
-                    >
-                      {showEditPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      )}
-                    </Button>
+                  </div>
+
+                  {formData.credential_type === 'basic' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_username">Username/Email</Label>
+                        <Input
+                          id="edit_username"
+                          placeholder="Enter username or email"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="edit_password"
+                            type={showEditPassword ? "text" : "password"}
+                            placeholder="Enter password"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            required
+                            className="pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowEditPassword(!showEditPassword)}
+                          >
+                            {showEditPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {formData.credential_type === 'advanced' && (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-lg font-semibold">Custom Fields</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Add custom fields for your advanced credentials (API keys, tokens, etc.)
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        {formData.custom_fields.map((field, index) => (
+                          <div key={field.id || index} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-1">
+                                <Label htmlFor={`edit-mask-toggle-${index}`} className="text-xs text-gray-600">
+                                  Mask
+                                </Label>
+                                <Switch
+                                  id={`edit-mask-toggle-${index}`}
+                                  checked={field.isMasked}
+                                  onCheckedChange={(checked) => {
+                                    const newFields = [...formData.custom_fields]
+                                    newFields[index] = { ...field, isMasked: checked, showValue: checked ? field.showValue : true }
+                                    setFormData({ ...formData, custom_fields: newFields })
+                                  }}
+                                  className="scale-75"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newFields = formData.custom_fields.filter((_, i) => i !== index)
+                                  setFormData({ ...formData, custom_fields: newFields })
+                                  // Clear validation errors when field is removed
+                                  setValidationErrors(prev => ({ ...prev, customFields: false }))
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="relative">
+                              <Input
+                                placeholder="(e.g., API Key, Token)"
+                                value={field.isMasked ? (field.showValue ? field.name : '•'.repeat(Math.max(field.name.length, 1))) : field.name}
+                                onChange={(e) => {
+                                  const newFields = [...formData.custom_fields]
+                                  if (field.isMasked) {
+                                    if (field.showValue) {
+                                      // When visible, update normally
+                                      newFields[index] = { ...field, name: e.target.value, value: e.target.value }
+                                    } else {
+                                      // When hidden, we need to handle this differently
+                                      // The input shows dots, but we need to track the actual changes
+                                      const currentLength = field.name.length
+                                      const inputLength = e.target.value.length
+                                      
+                                      if (inputLength > currentLength) {
+                                        // User is adding characters
+                                        const newChar = e.target.value.slice(-1)
+                                        newFields[index] = { ...field, name: field.name + newChar, value: field.name + newChar }
+                                      } else if (inputLength < currentLength) {
+                                        // User is deleting characters
+                                        const newValue = field.name.slice(0, inputLength)
+                                        newFields[index] = { ...field, name: newValue, value: newValue }
+                                      }
+                                    }
+                                  } else {
+                                    // When masking is disabled, update normally
+                                    newFields[index] = { ...field, name: e.target.value, value: e.target.value }
+                                  }
+                                  setFormData({ ...formData, custom_fields: newFields })
+                                  // Clear validation errors when field is updated
+                                  setValidationErrors(prev => ({ ...prev, customFields: false }))
+                                }}
+                                className={`${field.isMasked ? 'pr-20' : 'pr-10'} ${validationErrors.customFields ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500' : ''}`}
+                              />
+                              {field.isMasked && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newFields = [...formData.custom_fields]
+                                    newFields[index] = { ...field, showValue: !field.showValue }
+                                    setFormData({ ...formData, custom_fields: newFields })
+                                  }}
+                                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+                                >
+                                  {field.showValue ? (
+                                    <EyeOff className="h-4 w-4 text-gray-400" />
+                                  ) : (
+                                    <Eye className="h-4 w-4 text-gray-400" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newField = {
+                              id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                              name: '',
+                              value: '',
+                              isVisible: true,
+                              showValue: true,
+                              isMasked: true
+                            }
+                            setFormData({ ...formData, custom_fields: [...formData.custom_fields, newField] })
+                            // Clear validation errors when field is added
+                            setValidationErrors(prev => ({ ...prev, customFields: false }))
+                          }}
+                          className={`w-full ${validationErrors.customFields && formData.custom_fields.length === 0 ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500' : ''}`}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Field
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="edit_notes" className="text-sm font-medium">Notes</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Add any additional notes about this credential
+                      </p>
+                    </div>
+                    <Textarea
+                      id="edit_notes"
+                      placeholder="Add any additional notes about this credential..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="overflow-y-auto whitespace-pre-wrap break-words"
+                      rows={3}
+                      style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                    />
                   </div>
                 </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Update Credential</Button>
-              </div>
-            </form>
+
+              </form>
+            </ScrollArea>
+            
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" form="edit-credential-form">Update Credential</Button>
+            </div>
           </DialogContent>
         </Dialog>
 
         {/* Floating Action Button */}
-        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          setIsAddDialogOpen(open)
-          if (open) {
-            // Clear form when dialog opens
-            setFormData({ service_name: '', service_url: '', username: '', password: '' })
-            setIsCustomService(false)
-            setCustomServiceName('')
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button
-              className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-40 cursor-pointer"
-              size="lg"
-            >
-              <Plus className="h-6 w-6" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Credential</DialogTitle>
-              <DialogDescription>
-                Add a new service credential to your vault
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddCredential} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fab_service_name">Service Name</Label>
-                <Select onValueChange={handleServiceSelect} value={isCustomService ? 'Custom' : formData.service_name}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a service or choose Custom" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto z-50" position="popper" side="bottom" align="start">
-                    {SERVICE_OPTIONS.map((service) => (
-                      <SelectItem key={service.name} value={service.name}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isCustomService && (
-                  <Input
-                    placeholder="Enter custom service name"
-                    value={customServiceName}
-                    onChange={(e) => handleCustomServiceChange(e.target.value)}
-                    required
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fab_service_url">Service URL (optional)</Label>
-                <Input
-                  id="fab_service_url"
-                  placeholder="https://www.messenger.com/"
-                  value={formData.service_url}
-                  onChange={(e) => setFormData({ ...formData, service_url: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fab_username">Username/Email</Label>
-                <Input
-                  id="fab_username"
-                  placeholder="Enter username or email"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fab_password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="fab_password"
-                    type={showAddPassword ? "text" : "password"}
-                    placeholder="Enter password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowAddPassword(!showAddPassword)}
-                  >
-                    {showAddPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Add Credential</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-40 cursor-pointer"
+          size="lg"
+          onClick={handleOpenAddDialog}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

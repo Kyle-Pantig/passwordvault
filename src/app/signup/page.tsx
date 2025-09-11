@@ -215,7 +215,7 @@ export default function SignupPage() {
             >
               <Shield className="h-8 w-8 text-blue-500" />
               <div className="text-center">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Password Vault</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">DigiVault</h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Secure your digital life</p>
               </div>
             </Link>
@@ -271,7 +271,7 @@ export default function SignupPage() {
           >
             <Shield className="h-8 w-8 text-blue-500" />
             <div className="text-center">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Password Vault</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">DigiVault</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Secure your digital life</p>
             </div>
           </Link>
@@ -453,14 +453,14 @@ export default function SignupPage() {
                 <div>
                   <h4 className="font-medium mb-2">1. Acceptance of Terms</h4>
                   <p>
-                    By accessing and using Password Vault ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+                    By accessing and using DigiVault ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
                   </p>
                 </div>
                 
                 <div>
                   <h4 className="font-medium mb-2">2. Description of Service</h4>
                   <p>
-                    Password Vault is a secure password management service that allows users to store, organize, and manage their passwords and credentials in an encrypted format. The service provides features including:
+                    DigiVault is a secure password management service that allows users to store, organize, and manage their passwords and credentials in an encrypted format. The service provides features including:
                   </p>
                   <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                     <li>Secure password storage with AES encryption</li>
@@ -479,7 +479,7 @@ export default function SignupPage() {
 
                 <div>
                   <h4 className="font-medium mb-2">4. User Responsibilities</h4>
-                  <p>As a user of Password Vault, you agree to:</p>
+                  <p>As a user of DigiVault, you agree to:</p>
                   <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                     <li>Provide accurate and complete information during registration</li>
                     <li>Maintain the security of your account credentials</li>

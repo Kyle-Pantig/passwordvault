@@ -135,7 +135,7 @@ export default function Setup2FAPage() {
 
   const downloadBackupCodes = () => {
     const codesText = backupCodes.join('\n')
-    const blob = new Blob([`Password Vault - 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
+    const blob = new Blob([`DigiVault - 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

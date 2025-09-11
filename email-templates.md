@@ -10,7 +10,7 @@
 
 ## Enhanced Template (Recommended)
 ```html
-<h2>Welcome to Password Vault!</h2>
+<h2>Welcome to DigiVault!</h2>
 
 <p>Thank you for signing up for our secure password manager. To complete your registration, please confirm your email address by clicking the link below:</p>
 
@@ -19,7 +19,7 @@
 <p>If you didn't create an account with us, you can safely ignore this email.</p>
 
 <p>Best regards,<br>
-Password Vault Team</p>
+DigiVault Team</p>
 ```
 
 ## Professional Template (Advanced)
@@ -29,15 +29,15 @@ Password Vault Team</p>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm Your Email - Password Vault</title>
+    <title>Confirm Your Email - DigiVault</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #3b82f6; margin: 0;">🔐 Password Vault</h1>
+        <h1 style="color: #3b82f6; margin: 0;">🔐 DigiVault</h1>
         <p style="color: #666; margin: 5px 0 0 0;">Secure Password Manager</p>
     </div>
     
-    <h2 style="color: #1f2937;">Welcome to Password Vault!</h2>
+    <h2 style="color: #1f2937;">Welcome to DigiVault!</h2>
     
     <p>Thank you for signing up for our secure password manager. To complete your registration and start protecting your passwords, please confirm your email address.</p>
     
@@ -50,14 +50,14 @@ Password Vault Team</p>
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
     
     <p style="color: #666; font-size: 14px;">
-        If you didn't create an account with Password Vault, you can safely ignore this email.<br>
+        If you didn't create an account with DigiVault, you can safely ignore this email.<br>
         If the button above doesn't work, you can copy and paste this link into your browser:<br>
         <a href="{{ .ConfirmationURL }}" style="color: #3b82f6; word-break: break-all;">{{ .ConfirmationURL }}</a>
     </p>
     
     <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            © 2024 Password Vault. All rights reserved.
+            © 2024 DigiVault. All rights reserved.
         </p>
     </div>
 </body>

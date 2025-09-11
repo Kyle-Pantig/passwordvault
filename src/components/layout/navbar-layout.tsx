@@ -54,7 +54,7 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
   const getPageTitle = () => {
     switch (pathname) {
       case '/':
-        return 'Password Vault'
+        return 'DigiVault'
       case '/security':
         return 'Security Analysis'
       case '/settings':
@@ -66,7 +66,7 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
       case '/verify-2fa':
         return 'Verify 2FA'
       default:
-        return 'Password Vault'
+        return 'DigiVault'
     }
   }
 

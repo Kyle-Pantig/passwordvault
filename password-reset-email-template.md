@@ -28,7 +28,7 @@ To enable password reset functionality, you need to configure the email template
 <p>If you didn't request a password reset, you can safely ignore this email.</p>
 
 <p>Best regards,<br>
-Password Vault Team</p>
+DigiVault Team</p>
 ```
 
 ## Template Variables Used:

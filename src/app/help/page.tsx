@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -22,7 +21,6 @@ import {
 
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const _router = useRouter()
 
   const helpSections = [
     {
@@ -399,7 +397,7 @@ export default function HelpPage() {
                     variant="outline"
                     className="flex items-center space-x-2"
                     onClick={() => {
-                      toast.info('Support email: support@passwordvault.com')
+                      toast.info('Support email: support@digivault.com')
                     }}
                   >
                     <Mail className="h-4 w-4" />

@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = "https://passwordvault-pi.vercel.app"; 
+  const baseUrl = "https://digivault.vercel.app"; 
   return {
     rules: [
       {

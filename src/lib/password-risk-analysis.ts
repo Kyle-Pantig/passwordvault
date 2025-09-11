@@ -24,8 +24,9 @@ export interface PasswordRiskAnalysis {
 export interface Credential {
   id: string;
   service_name: string;
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
+  credential_type?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -141,29 +142,32 @@ export function analyzePasswordRisk(credentials: Credential[]): PasswordRiskAnal
 
   // Analyze each credential
   credentials.forEach(credential => {
-    const analysis = calculatePasswordStrength(credential.password);
-    
-    // Check for weak passwords
-    if (analysis.strength === 'very-weak' || analysis.strength === 'weak') {
-      weakCount++;
-      weakPasswords.push({
+    // Only analyze basic credentials with passwords
+    if (credential.credential_type === 'basic' && credential.password && credential.username) {
+      const analysis = calculatePasswordStrength(credential.password);
+      
+      // Check for weak passwords
+      if (analysis.strength === 'very-weak' || analysis.strength === 'weak') {
+        weakCount++;
+        weakPasswords.push({
+          id: credential.id,
+          service_name: credential.service_name,
+          username: credential.username,
+          strength: analysis.strength,
+          issues: analysis.issues
+        });
+      }
+
+      // Track password reuse
+      if (!passwordCounts.has(credential.password)) {
+        passwordCounts.set(credential.password, []);
+      }
+      passwordCounts.get(credential.password)!.push({
         id: credential.id,
         service_name: credential.service_name,
-        username: credential.username,
-        strength: analysis.strength,
-        issues: analysis.issues
+        username: credential.username
       });
     }
-
-    // Track password reuse
-    if (!passwordCounts.has(credential.password)) {
-      passwordCounts.set(credential.password, []);
-    }
-    passwordCounts.get(credential.password)!.push({
-      id: credential.id,
-      service_name: credential.service_name,
-      username: credential.username
-    });
   });
 
   // Find reused passwords

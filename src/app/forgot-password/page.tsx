@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
             >
               <Shield className="h-8 w-8 text-blue-500" />
               <div className="text-center">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Password Vault</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">DigiVault</h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Secure your digital life</p>
               </div>
             </Link>
@@ -121,7 +121,7 @@ export default function ForgotPasswordPage() {
           >
             <Shield className="h-8 w-8 text-blue-500" />
             <div className="text-center">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Password Vault</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">DigiVault</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Secure your digital life</p>
             </div>
           </Link>

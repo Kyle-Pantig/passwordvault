@@ -22,7 +22,7 @@ export default function TermsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
-              By accessing and using Password Vault ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using DigiVault ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
           </CardContent>
         </Card>
@@ -33,7 +33,7 @@ export default function TermsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
-              Password Vault is a comprehensive secure password management service that allows users to store, organize, and manage their passwords and credentials in an encrypted format. The service provides advanced features including:
+              DigiVault is a comprehensive secure password management service that allows users to store, organize, and manage their passwords and credentials in an encrypted format. The service provides advanced features including:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 ml-4">
               <li>Secure password storage with AES-256 encryption</li>
@@ -56,7 +56,7 @@ export default function TermsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
-              As a user of Password Vault, you agree to:
+              As a user of DigiVault, you agree to:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 ml-4">
               <li>Provide accurate and complete information during registration</li>
@@ -75,7 +75,7 @@ export default function TermsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
-              Password Vault includes advanced security analysis features to help you maintain strong password hygiene:
+              DigiVault includes advanced security analysis features to help you maintain strong password hygiene:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 ml-4">
               <li><strong>Password Strength Analysis:</strong> Real-time evaluation of password strength based on length, complexity, and common patterns</li>
@@ -122,7 +122,7 @@ export default function TermsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
-              In no event shall Password Vault, its officers, directors, employees, or agents be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the service.
+              In no event shall DigiVault, its officers, directors, employees, or agents be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the service.
             </p>
           </CardContent>
         </Card>

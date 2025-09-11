@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { toast } from 'sonner'
 import { useDarkMode } from '@/contexts/dark-mode-context'
-import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X, Copy, AlertTriangle } from 'lucide-react'
+import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X, Copy, AlertTriangle, Info } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 
 export default function SettingsPage() {
@@ -29,6 +30,13 @@ export default function SettingsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isOAuthUser, setIsOAuthUser] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [showVerificationCode, setShowVerificationCode] = useState(false)
+  const [verificationAction, setVerificationAction] = useState<'regenerate' | 'view'>('regenerate')
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false)
+  const [emailVerificationCode, setEmailVerificationCode] = useState('')
+  const [showEmailVerification, setShowEmailVerification] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | 'very-strong'>('weak')
   const [passwordErrors, setPasswordErrors] = useState<string[]>([])
   const [backupCodes, setBackupCodes] = useState<string[]>([])
@@ -125,6 +133,11 @@ export default function SettingsPage() {
     // Load user settings from localStorage or database
     const savedEmailNotifications = localStorage.getItem('emailNotifications') !== 'false'
     setEmailNotifications(savedEmailNotifications)
+    
+    // Check if user is OAuth (no password set)
+    if (user?.app_metadata?.provider !== 'email') {
+      setIsOAuthUser(true)
+    }
     
     // Load 2FA status from database
     try {
@@ -245,7 +258,7 @@ export default function SettingsPage() {
 
   const downloadBackupCodes = () => {
     const codesText = backupCodes.join('\n')
-    const blob = new Blob([`Password Vault - 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
+    const blob = new Blob([`DigiVault - 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -293,11 +306,96 @@ export default function SettingsPage() {
   }
 
   const handleShowBackupCodes = () => {
-    setShowPasswordDialog(true)
+    if (isOAuthUser && twoFactorEnabled) {
+      // For OAuth users with 2FA, use email verification
+      setVerificationAction('regenerate')
+      sendEmailVerification()
+    } else {
+      setShowPasswordDialog(true)
+    }
   }
 
   const handleViewCurrentCodes = () => {
-    setShowViewCodesDialog(true)
+    if (isOAuthUser && twoFactorEnabled) {
+      // For OAuth users with 2FA, use email verification
+      setVerificationAction('view')
+      sendEmailVerification()
+    } else {
+      setShowViewCodesDialog(true)
+    }
+  }
+
+  const sendEmailVerification = async () => {
+    try {
+      const response = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        setEmailVerificationSent(true)
+        setShowEmailVerification(true)
+        toast.success('Verification code sent to your email')
+      } else {
+        toast.error('Failed to send verification code')
+      }
+    } catch (_error) {
+      toast.error('Failed to send verification code')
+    }
+  }
+
+  const verifyEmailCode = async () => {
+    if (!emailVerificationCode) {
+      toast.error('Please enter the verification code')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/auth/verify-email-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: emailVerificationCode })
+      })
+
+      if (response.ok) {
+        setShowEmailVerification(false)
+        setEmailVerificationCode('')
+        setEmailVerificationSent(false)
+        
+        // Proceed with the appropriate action
+        if (verificationAction === 'regenerate') {
+          await regenerateBackupCodes()
+        } else if (verificationAction === 'view') {
+          const codesResponse = await fetch('/api/2fa/get-backup-codes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+
+          const codesData = await codesResponse.json()
+
+          if (codesResponse.ok) {
+            setCurrentBackupCodes(codesData.backupCodes)
+            setShowCurrentCodes(true)
+          } else {
+            toast.error(codesData.error || 'Failed to fetch backup codes')
+          }
+        }
+        
+        toast.success('Email verified successfully!')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Invalid verification code')
+        setEmailVerificationCode('')
+      }
+    } catch (_error) {
+      toast.error('Failed to verify email code')
+    }
   }
 
   const verifyPasswordForViewCodes = async () => {
@@ -362,7 +460,7 @@ export default function SettingsPage() {
 
   const downloadCurrentBackupCodes = () => {
     const codesText = currentBackupCodes.join('\n')
-    const blob = new Blob([`Password Vault - Current 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
+    const blob = new Blob([`DigiVault - Current 2FA Backup Codes\n\n${codesText}\n\nKeep these codes safe! Each can only be used once.`], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -687,9 +785,23 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Backup Codes</Label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Generate new backup codes for emergency access
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Generate new backup codes for emergency access
+                        </p>
+                        {isOAuthUser && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-red-500 animate-pulse hover:animate-bounce cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-sm">OAuth users: Email verification required instead of password</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -1153,6 +1265,75 @@ export default function SettingsPage() {
                 ) : (
                   'Verify & View'
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Verification Dialog for OAuth Users */}
+      <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <span>Email Verification</span>
+            </DialogTitle>
+            <DialogDescription>
+              We've sent a verification code to your email address. Enter the code to {verificationAction === 'regenerate' ? 'generate new backup codes' : 'view current backup codes'}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-verification-code">Verification Code</Label>
+              <Input
+                id="email-verification-code"
+                type="text"
+                placeholder="Enter 6-digit code"
+                value={emailVerificationCode}
+                onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    verifyEmailCode()
+                  }
+                }}
+                autoComplete="one-time-code"
+                className="text-center text-lg tracking-widest"
+                maxLength={6}
+              />
+            </div>
+
+            {emailVerificationSent && (
+              <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                Didn't receive the code? 
+                <button
+                  onClick={sendEmailVerification}
+                  className="text-blue-600 dark:text-blue-400 hover:underline ml-1"
+                >
+                  Resend
+                </button>
+              </div>
+            )}
+
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEmailVerification(false)
+                  setEmailVerificationCode('')
+                  setEmailVerificationSent(false)
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={verifyEmailCode}
+                disabled={emailVerificationCode.length !== 6}
+                className="flex-1"
+              >
+                Verify & Continue
               </Button>
             </div>
           </div>

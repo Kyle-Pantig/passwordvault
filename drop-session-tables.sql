@@ -10,3 +10,4 @@ DROP TABLE IF EXISTS user_sessions CASCADE;
 DROP TABLE IF EXISTS login_attempts CASCADE;
 
 -- Note: user_profiles table is kept as it's used for 2FA functionality
+

@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
     } else {
       // Generate a new secret for TOTP
       secret = speakeasy.generateSecret({
-        name: `Password Vault (${user.email})`,
-        issuer: 'Password Vault',
+        name: `DigiVault (${user.email})`,
+        issuer: 'DigiVault',
         length: 32
       })
     }

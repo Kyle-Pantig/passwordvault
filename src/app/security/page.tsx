@@ -53,10 +53,24 @@ export default function SecurityPage() {
     }));
   };
 
+  // Helper function to mask email addresses
+  const maskEmail = (email: string) => {
+    if (!email || !email.includes('@')) return email
+    
+    const [localPart, domain] = email.split('@')
+    if (localPart.length <= 2) return email
+    
+    const firstChar = localPart[0]
+    const lastChar = localPart[localPart.length - 1]
+    const maskedMiddle = '*'.repeat(Math.max(1, localPart.length - 2))
+    
+    return `${firstChar}${maskedMiddle}${lastChar}@${domain}`
+  };
+
   // Helper function to get password for a specific credential ID
   const getPasswordForCredential = (credentialId: string): string => {
     const credential = credentials.find(cred => cred.id === credentialId);
-    return credential ? credential.password : '';
+    return credential?.password || '';
   };
 
   const refreshAnalysis = async () => {
@@ -208,7 +222,7 @@ export default function SecurityPage() {
                                 {weak.service_name}
                               </span>
                               <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                                ({weak.username})
+                                ({maskEmail(weak.username)})
                               </span>
                             </div>
                           </div>
@@ -272,7 +286,7 @@ export default function SecurityPage() {
                                 <div className="flex items-center justify-between mb-2">
                                   <div>
                                     <span className="font-medium text-sm">{service.service_name}</span>
-                                    <span className="ml-2 text-xs text-gray-500">({service.username})</span>
+                                    <span className="ml-2 text-xs text-gray-500">({maskEmail(service.username)})</span>
                                   </div>
                                   <Button
                                     variant="ghost"

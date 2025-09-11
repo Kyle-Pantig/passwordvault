@@ -1,4 +1,4 @@
-# Password Vault - Secure Password Manager
+# DigiVault - Secure Password Manager
 
 A modern, secure password manager built with Next.js, TypeScript, TailwindCSS, shadcn/ui, and Supabase.
 
@@ -34,7 +34,7 @@ A modern, secure password manager built with Next.js, TypeScript, TailwindCSS, s
 
 ```bash
 git clone <your-repo-url>
-cd secretkeys
+cd digivault
 npm install
 ```
 
