@@ -197,11 +197,10 @@ export function DynamicCredentialCard({
 
     return (
       <div className="space-y-2">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Custom Fields</h4>
         <div className="space-y-3">
           {visibleFields.map((field) => (
             <div key={field.id}>
-              <Label className="text-sm text-gray-500 dark:text-gray-400">{field.name}</Label>
+              <Label className="text-sm text-gray-500 dark:text-gray-400">TEXT</Label>
               <div className="relative mt-1">
                 <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                   <p className="text-sm font-mono px-3 py-2 flex-1 min-h-[40px] flex items-center truncate">
