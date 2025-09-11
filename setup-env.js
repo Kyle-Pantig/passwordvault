@@ -14,6 +14,10 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
 # Encryption key for passwords (generated automatically)
 ENCRYPTION_KEY=${encryptionKey}
+
+# hCaptcha Configuration (get from https://dashboard.hcaptcha.com/)
+NEXT_PUBLIC_HCAPTCHA_SITE_KEY=your_hcaptcha_site_key_here
+HCAPTCHA_SECRET_KEY=your_hcaptcha_secret_key_here
 `;
 
 fs.writeFileSync('.env.local', envContent);
@@ -26,5 +30,7 @@ console.log('Next steps:');
 console.log('1. Go to your Supabase project dashboard');
 console.log('2. Copy your project URL and anon key from Settings > API');
 console.log('3. Update the .env.local file with your Supabase credentials');
-console.log('4. Run the SQL commands from supabase-schema.sql in your Supabase SQL Editor');
-console.log('5. Run "npm run dev" to start the development server');
+console.log('4. Go to https://dashboard.hcaptcha.com/ and create a new site');
+console.log('5. Copy your hCaptcha Site Key and Secret Key to .env.local');
+console.log('6. Run the SQL commands from supabase-schema.sql in your Supabase SQL Editor');
+console.log('7. Run "npm run dev" to start the development server');

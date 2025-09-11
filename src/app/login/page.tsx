@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { Eye, EyeOff, Shield } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 import { GoogleIcon } from '@/components/ui/google-icon'
+import { HCaptchaComponent, HCaptchaRef } from '@/components/ui/hcaptcha'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -23,6 +24,9 @@ export default function LoginPage() {
   const [lockoutTime, setLockoutTime] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<string | null>(null)
   const [isLocked, setIsLocked] = useState(false) // true for 6+ attempts, false for 3-5 attempts
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaError, setCaptchaError] = useState<string | null>(null)
+  const captchaRef = useRef<HCaptchaRef>(null)
   const router = useRouter()
   const { user, loading: authLoading, signIn, signInWithGoogle, check2FAStatus } = useAuth()
 
@@ -103,14 +107,37 @@ export default function LoginPage() {
   }, [lockoutTime])
 
 
+  const handleCaptchaVerify = (token: string) => {
+    setCaptchaToken(token)
+    setCaptchaError(null)
+  }
+
+  const handleCaptchaExpire = () => {
+    setCaptchaToken(null)
+    setCaptchaError('Captcha expired. Please complete it again.')
+  }
+
+  const handleCaptchaError = (error: any) => {
+    setCaptchaToken(null)
+    setCaptchaError('Captcha verification failed. Please try again.')
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setRateLimited(false)
     setLockoutTime(null)
+    setCaptchaError(null)
+
+    // Check if captcha is required and completed
+    if (process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && !captchaToken) {
+      setCaptchaError('Please complete the captcha verification.')
+      setLoading(false)
+      return
+    }
 
     try {
-      const result = await signIn(email, password)
+      const result = await signIn(email, password, captchaToken || undefined)
 
       if (!result.success) {
         // Handle rate limiting
@@ -126,6 +153,12 @@ export default function LoginPage() {
             setLockoutTime(result.lockoutUntil)
           }
         }
+        
+        // Reset captcha on failed login
+        if (captchaRef.current) {
+          captchaRef.current.reset()
+        }
+        setCaptchaToken(null)
         
         toast.error(result.error || 'Login failed')
         return
@@ -241,6 +274,26 @@ export default function LoginPage() {
                 </Button>
               </div>
             </div>
+            {/* hCaptcha */}
+            {process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && (
+              <div className="space-y-2">
+                <HCaptchaComponent
+                  ref={captchaRef}
+                  onVerify={handleCaptchaVerify}
+                  onExpire={handleCaptchaExpire}
+                  onError={handleCaptchaError}
+                  theme="light"
+                  size="normal"
+                  className="flex justify-center"
+                />
+                {captchaError && (
+                  <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                    {captchaError}
+                  </p>
+                )}
+              </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading || rateLimited}>
               {loading ? 'Signing in...' : rateLimited ? (isLocked ? 'Account Locked' : 'Account Temporarily Disabled') : 'Sign In'}
             </Button>

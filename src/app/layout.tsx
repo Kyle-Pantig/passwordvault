@@ -135,7 +135,6 @@ export default function RootLayout({
                 <NavbarLayout>
                   {children}
                 </NavbarLayout>
-                <Footer />
               </div>
             </LoadingWrapper>
           </DarkModeProvider>

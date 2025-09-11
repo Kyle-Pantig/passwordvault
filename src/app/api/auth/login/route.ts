@@ -11,13 +11,36 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password, captchaToken } = await request.json()
     
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
       )
+    }
+
+    // Verify hCaptcha if token is provided
+    if (captchaToken) {
+      const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          secret: process.env.HCAPTCHA_SECRET_KEY!,
+          response: captchaToken,
+        }),
+      })
+
+      const captchaResult = await captchaResponse.json()
+      
+      if (!captchaResult.success) {
+        return NextResponse.json({
+          success: false,
+          error: 'Captcha verification failed. Please try again.'
+        }, { status: 400 })
+      }
     }
 
     // Get client IP for rate limiting
