@@ -77,14 +77,17 @@ export function CategoryFolder({ category, credentialCount, onClick, onRename, o
               <Edit2 className="w-4 h-4 mr-2" />
               Rename
             </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={(e) => { e.stopPropagation(); onDelete(category); }}
-              className={isLastFolder || category.name.toLowerCase() === 'general' ? "text-gray-400 cursor-not-allowed" : "text-red-600 focus:text-red-600"}
-              disabled={isLastFolder || category.name.toLowerCase() === 'general'}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {category.name.toLowerCase() === 'general' ? "Delete (Default folder)" : isLastFolder ? "Delete (Last folder)" : "Delete"}
-            </DropdownMenuItem>
+            {/* Only show delete option if it's not the General folder */}
+            {category.name.toLowerCase() !== 'general' && (
+              <DropdownMenuItem 
+                onClick={(e) => { e.stopPropagation(); onDelete(category); }}
+                className={isLastFolder ? "text-gray-400 cursor-not-allowed" : "text-red-600 focus:text-red-600"}
+                disabled={isLastFolder}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {isLastFolder ? "Delete (Last folder)" : "Delete"}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

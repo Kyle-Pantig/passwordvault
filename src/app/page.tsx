@@ -1830,8 +1830,7 @@ export default function VaultPage() {
         {/* Categories or Credentials Grid */}
         {viewMode === 'categories' ? (
           // Categories View
-          <>
-            {categories.length === 0 && getUncategorizedCount() === 0 ? (
+          <>            {categories.length === 0 && getUncategorizedCount() === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 dark:text-gray-600 mb-4">
                   <Folder className="mx-auto h-12 w-12" />
@@ -1849,11 +1848,12 @@ export default function VaultPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 items-start">
-                {/* All Vaults folder */}
-                <Card 
-                  className="hover:shadow-lg transition-all duration-200 cursor-pointer group h-40"
-                  onClick={() => handleCategoryClick('all')}
-                >
+                {/* All Vaults folder - only show if it matches search or no search */}
+                {(!searchTerm || 'all vaults'.includes(searchTerm.toLowerCase())) && (
+                  <Card 
+                    className="hover:shadow-lg transition-all duration-200 cursor-pointer group h-40"
+                    onClick={() => handleCategoryClick('all')}
+                  >
                   <CardContent className="p-6 h-full flex flex-col items-center justify-center text-center">
                     <div className="flex flex-col items-center space-y-3">
                       <div className="w-16 h-16 rounded-lg flex items-center justify-center transition-colors duration-200 group-hover:bg-opacity-20 bg-gray-500 dark:bg-gray-100">
@@ -1867,9 +1867,10 @@ export default function VaultPage() {
                     </div>
                   </CardContent>
                 </Card>
+                )}
 
-                {/* Uncategorized folder */}
-                {getUncategorizedCount() > 0 && (
+                {/* Uncategorized folder - only show if it matches search or no search */}
+                {getUncategorizedCount() > 0 && (!searchTerm || 'uncategorized'.includes(searchTerm.toLowerCase())) && (
                   <Card 
                     className="hover:shadow-lg transition-all duration-200 cursor-pointer group h-40"
                     onClick={() => handleCategoryClick('uncategorized')}
@@ -1890,22 +1891,38 @@ export default function VaultPage() {
                 )}
                 
                 {/* Category folders */}
-                {categories.map((category) => {
-                  const credentialCount = credentials.filter(cred => cred.category_id === category.id).length
-                  const isLastFolder = categories.length <= 1
-                  return (
-                    <CategoryFolder
-                      key={category.id}
-                      category={category}
-                      credentialCount={credentialCount}
-                      onClick={() => handleCategoryClick(category.id)}
-                      onRename={handleRenameFolder}
-                      onDelete={handleDeleteFolder}
-                      isDeleting={isPreparingDelete && deletingCategory?.id === category.id}
-                      isLastFolder={isLastFolder}
-                    />
-                  )
-                })}
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => {
+                    const credentialCount = credentials.filter(cred => cred.category_id === category.id).length
+                    const isLastFolder = filteredCategories.length <= 1
+                    return (
+                      <CategoryFolder
+                        key={category.id}
+                        category={category}
+                        credentialCount={credentialCount}
+                        onClick={() => handleCategoryClick(category.id)}
+                        onRename={handleRenameFolder}
+                        onDelete={handleDeleteFolder}
+                        isDeleting={isPreparingDelete && deletingCategory?.id === category.id}
+                        isLastFolder={isLastFolder}
+                      />
+                    )
+                  })
+                ) : searchTerm ? (
+                  <div className="col-span-full">
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 dark:text-gray-600 mb-4">
+                        <Search className="mx-auto h-12 w-12" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                        No folders found
+                      </h3>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No folders match your search for "{searchTerm}"
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Helpful message when only one folder */}
                 {categories.length === 1 && (
