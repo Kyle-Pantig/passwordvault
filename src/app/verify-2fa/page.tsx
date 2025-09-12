@@ -76,6 +76,9 @@ function Verify2FAContent() {
         const data = await response.json()
 
         if (response.ok) {
+          // Set session storage flag for 2FA verification
+          sessionStorage.setItem('2fa_verified', 'true')
+          
           toast.success('Login successful!')
           
           // Show warning if provided
@@ -100,6 +103,9 @@ function Verify2FAContent() {
         const data = await response.json()
 
         if (response.ok) {
+          // Set session storage flag for 2FA verification
+          sessionStorage.setItem('2fa_verified', 'true')
+          
           toast.success('Login successful!')
           router.push('/')
         } else {

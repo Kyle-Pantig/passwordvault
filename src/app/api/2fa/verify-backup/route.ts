@@ -68,7 +68,11 @@ export async function POST(request: NextRequest) {
       // Silently fail - verification still succeeded
     }
 
-    return NextResponse.json(response)
+    return NextResponse.json({
+      ...response,
+      success: true,
+      message: '2FA verification successful'
+    })
   } catch (error) {
     console.error('Backup code verification error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -237,7 +237,7 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
       </Navbar>
 
       {/* Main Content */}
-      <main className="pt-24">
+      <main className="pt-16">
         {children}
       </main>
     </div>

@@ -92,7 +92,10 @@ export async function POST(request: NextRequest) {
       // Silently fail - verification still succeeded
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: '2FA verification successful'
+    })
   } catch (error) {
     console.error('2FA verification error:', error)
     return NextResponse.json({ 

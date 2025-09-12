@@ -9,6 +9,16 @@ export interface AdvancedCredentialField {
 
 export type CredentialType = 'basic' | 'advanced'
 
+export interface Category {
+  id: string
+  user_id: string
+  name: string
+  color: string
+  icon: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Credential {
   id: string
   user_id: string
@@ -19,6 +29,8 @@ export interface Credential {
   password?: string
   custom_fields: AdvancedCredentialField[]
   notes?: string
+  category_id?: string
+  category?: Category
   created_at: string
   updated_at: string
 }
@@ -31,6 +43,7 @@ export interface CreateCredentialData {
   password?: string
   custom_fields?: AdvancedCredentialField[]
   notes?: string
+  category_id?: string
 }
 
 export interface UpdateCredentialData {
@@ -41,4 +54,17 @@ export interface UpdateCredentialData {
   password?: string
   custom_fields?: AdvancedCredentialField[]
   notes?: string
+  category_id?: string
+}
+
+export interface CreateCategoryData {
+  name: string
+  color?: string
+  icon?: string
+}
+
+export interface UpdateCategoryData {
+  name?: string
+  color?: string
+  icon?: string
 }

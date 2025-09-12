@@ -1,9 +1,11 @@
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { Credential, CreateCredentialData, UpdateCredentialData, AdvancedCredentialField, Category, CreateCategoryData, UpdateCategoryData } from '@/lib/types'
 
-export class DatabaseService {
-  private supabase = createClient()
+export class DatabaseServiceServer {
+  private async getSupabase() {
+    return await createClient()
+  }
 
   private encryptCustomFields(fields: AdvancedCredentialField[]): AdvancedCredentialField[] {
     return fields.map(field => ({
@@ -47,7 +49,8 @@ export class DatabaseService {
 
   async getCredentials(): Promise<Credential[]> {
     try {
-      const { data, error } = await this.supabase
+      const supabase = await this.getSupabase()
+      const { data, error } = await supabase
         .from('credentials')
         .select(`
           *,
@@ -116,7 +119,8 @@ export class DatabaseService {
   }
 
   async createCredential(credentialData: CreateCredentialData): Promise<Credential> {
-    const { data: { user } } = await this.supabase.auth.getUser()
+    const supabase = await this.getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
       throw new Error('User not authenticated')
@@ -142,7 +146,7 @@ export class DatabaseService {
       insertData.password = encrypt(credentialData.password)
     }
     
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('credentials')
       .insert(insertData)
       .select()
@@ -163,6 +167,7 @@ export class DatabaseService {
   }
 
   async updateCredential(id: string, credentialData: UpdateCredentialData): Promise<Credential> {
+    const supabase = await this.getSupabase()
     const updateData: Record<string, unknown> = { ...credentialData }
     
     // Encrypt password and username if they're being updated
@@ -176,7 +181,7 @@ export class DatabaseService {
       updateData.custom_fields = this.encryptCustomFields(credentialData.custom_fields)
     }
 
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('credentials')
       .update(updateData)
       .eq('id', id)
@@ -198,7 +203,8 @@ export class DatabaseService {
   }
 
   async deleteCredential(id: string): Promise<void> {
-    const { error } = await this.supabase
+    const supabase = await this.getSupabase()
+    const { error } = await supabase
       .from('credentials')
       .delete()
       .eq('id', id)
@@ -211,7 +217,8 @@ export class DatabaseService {
   // Category methods
   async getCategories(): Promise<Category[]> {
     try {
-      const { data, error } = await this.supabase
+      const supabase = await this.getSupabase()
+      const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('name', { ascending: true })
@@ -229,7 +236,8 @@ export class DatabaseService {
   }
 
   async createCategory(categoryData: CreateCategoryData): Promise<Category> {
-    const { data: { user } } = await this.supabase.auth.getUser()
+    const supabase = await this.getSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
       throw new Error('User not authenticated')
@@ -239,11 +247,10 @@ export class DatabaseService {
       user_id: user.id,
       name: categoryData.name,
       color: categoryData.color || '#3B82F6',
-      icon: categoryData.icon || 'folder',
-      description: categoryData.description || ''
+      icon: categoryData.icon || 'folder'
     }
     
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('categories')
       .insert(insertData)
       .select()
@@ -257,7 +264,8 @@ export class DatabaseService {
   }
 
   async updateCategory(id: string, categoryData: UpdateCategoryData): Promise<Category> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getSupabase()
+    const { data, error } = await supabase
       .from('categories')
       .update(categoryData)
       .eq('id', id)
@@ -271,15 +279,36 @@ export class DatabaseService {
     return data
   }
 
-  async deleteCategory(id: string): Promise<void> {
-    // First, move all credentials in this category to null (no category)
-    await this.supabase
-      .from('credentials')
-      .update({ category_id: null })
-      .eq('category_id', id)
+  async deleteCategory(id: string, moveCredentialsTo?: string, deleteCredentials: boolean = false): Promise<void> {
+    const supabase = await this.getSupabase()
+    
+    if (deleteCredentials) {
+      // Delete all credentials in this category
+      const { error: deleteError } = await supabase
+        .from('credentials')
+        .delete()
+        .eq('category_id', id)
+      
+      if (deleteError) {
+        throw new Error(`Failed to delete credentials: ${deleteError.message}`)
+      }
+    } else if (moveCredentialsTo) {
+      // Move all credentials to the specified category
+      const { error: moveError } = await supabase
+        .from('credentials')
+        .update({ category_id: moveCredentialsTo })
+        .eq('category_id', id)
+      
+      if (moveError) {
+        throw new Error(`Failed to move credentials: ${moveError.message}`)
+      }
+    } else {
+      // If no move destination specified, throw an error
+      throw new Error('Cannot delete folder with credentials. Please specify a destination folder or choose to delete all credentials.')
+    }
 
     // Then delete the category
-    const { error } = await this.supabase
+    const { error } = await supabase
       .from('categories')
       .delete()
       .eq('id', id)
@@ -288,6 +317,60 @@ export class DatabaseService {
       throw new Error(`Failed to delete category: ${error.message}`)
     }
   }
+
+  async moveCredentialsToCategory(credentialIds: string[], targetCategoryId: string | null): Promise<void> {
+    const supabase = await this.getSupabase()
+    const { error } = await supabase
+      .from('credentials')
+      .update({ category_id: targetCategoryId })
+      .in('id', credentialIds)
+
+    if (error) {
+      throw new Error(`Failed to move credentials: ${error.message}`)
+    }
+  }
+
+  async getCredentialsInCategory(categoryId: string): Promise<Credential[]> {
+    try {
+      const supabase = await this.getSupabase()
+      const { data, error } = await supabase
+        .from('credentials')
+        .select(`
+          id,
+          service_name,
+          service_url,
+          credential_type,
+          created_at,
+          updated_at,
+          category_id
+        `)
+        .eq('category_id', categoryId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Database error:', error)
+        throw new Error(`Failed to fetch credentials: ${error.message}`)
+      }
+
+      if (!data) {
+        return []
+      }
+
+      // Return credentials without decryption for the delete dialog
+      return data.map(cred => ({
+        ...cred,
+        user_id: '', // Not needed for display
+        username: undefined,
+        password: undefined,
+        custom_fields: [],
+        notes: undefined,
+        category: undefined
+      }))
+    } catch (error) {
+      console.error('Error in getCredentialsInCategory:', error)
+      throw error
+    }
+  }
 }
 
-export const db = new DatabaseService()
+export const dbServer = new DatabaseServiceServer()

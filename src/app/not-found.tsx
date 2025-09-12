@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { motion } from 'motion/react'
-import { Home, ArrowLeft, Search, Shield, AlertTriangle } from 'lucide-react'
+import { Home, AlertTriangle, Shield } from 'lucide-react'
 import Link from 'next/link'
 
 export default function NotFound() {
@@ -41,7 +40,7 @@ export default function NotFound() {
             }}
             className="relative mb-8"
           >
-            <div className="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-400 dark:via-purple-400 dark:to-blue-600">
+            <div className="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 dark:from-blue-400 dark:via-blue-500 dark:to-blue-600">
               404
             </div>
             
@@ -77,21 +76,6 @@ export default function NotFound() {
               <AlertTriangle className="h-6 w-6 text-orange-500 opacity-60" />
             </motion.div>
             
-            <motion.div
-              animate={{ 
-                y: [0, -8, 0],
-                x: [0, 5, 0]
-              }}
-              transition={{ 
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.5
-              }}
-              className="absolute -bottom-2 -left-8"
-            >
-              <Search className="h-5 w-5 text-purple-500 opacity-60" />
-            </motion.div>
           </motion.div>
 
           {/* Main content */}
@@ -110,108 +94,29 @@ export default function NotFound() {
               </p>
             </div>
 
-            {/* Animated card */}
+            {/* Action button */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.6 }}
+              className="flex justify-center"
             >
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="text-center">
-                      <motion.div
-                        animate={{ 
-                          scale: [1, 1.1, 1],
-                          rotate: [0, 2, 0]
-                        }}
-                        transition={{ 
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        className="inline-block"
-                      >
-                        <div className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
-                          <Shield className="h-8 w-8 text-white" />
-                        </div>
-                      </motion.div>
-                      
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                        Don't worry, your passwords are safe!
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        This page might have been moved, deleted, or you might have entered the wrong URL.
-                      </p>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button
-                          onClick={() => router.back()}
-                          variant="outline"
-                          className="w-full sm:w-auto"
-                        >
-                          <ArrowLeft className="h-4 w-4 mr-2" />
-                          Go Back
-                        </Button>
-                      </motion.div>
-                      
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button
-                          asChild
-                          className="w-full sm:w-auto"
-                        >
-                          <Link href="/">
-                            <Home className="h-4 w-4 mr-2" />
-                            Go Home
-                          </Link>
-                        </Button>
-                      </motion.div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  asChild
+                  className="w-full sm:w-auto"
+                >
+                  <Link href="/">
+                    <Home className="h-4 w-4 mr-2" />
+                    Go Home
+                  </Link>
+                </Button>
+              </motion.div>
             </motion.div>
 
-            {/* Helpful suggestions */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="text-center"
-            >
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Need help? Try these:
-              </p>
-              <div className="flex flex-wrap justify-center gap-4 text-sm">
-                <Link 
-                  href="/help" 
-                  className="text-blue-600 dark:text-blue-400 hover:underline transition-colors"
-                >
-                  Help Center
-                </Link>
-                <Link 
-                  href="/security" 
-                  className="text-blue-600 dark:text-blue-400 hover:underline transition-colors"
-                >
-                  Security
-                </Link>
-                <Link 
-                  href="/settings" 
-                  className="text-blue-600 dark:text-blue-400 hover:underline transition-colors"
-                >
-                  Settings
-                </Link>
-              </div>
-            </motion.div>
           </motion.div>
         </motion.div>
 

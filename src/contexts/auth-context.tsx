@@ -192,6 +192,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         toast.error(error.message)
       } else {
+        // Clear 2FA verification flag from session storage
+        sessionStorage.removeItem('2fa_verified')
         toast.success('Signed out successfully')
       }
     } catch (_error) {
