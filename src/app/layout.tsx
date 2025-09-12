@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import { DarkModeProvider } from "@/contexts/dark-mode-context";
 import { AuthProvider } from "@/contexts/auth-context";
 import { LoadingWrapper } from "@/components/loading-wrapper";
+import { ReCaptchaProvider } from '@/components/providers/recaptcha-provider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -128,17 +129,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <DarkModeProvider>
-            <LoadingWrapper>
-              <div className="min-h-screen flex flex-col">
-                <NavbarLayout>
-                  {children}
-                </NavbarLayout>
-              </div>
-            </LoadingWrapper>
-          </DarkModeProvider>
-        </AuthProvider>
+        <ReCaptchaProvider>
+          <AuthProvider>
+            <DarkModeProvider>
+              <LoadingWrapper>
+                <div className="min-h-screen flex flex-col">
+                  <NavbarLayout>
+                    {children}
+                  </NavbarLayout>
+                </div>
+              </LoadingWrapper>
+            </DarkModeProvider>
+          </AuthProvider>
+        </ReCaptchaProvider>
         <Toaster />
       </body>
     </html>

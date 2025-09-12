@@ -9,14 +9,14 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ 
+  signIn: (email: string, password: string, recaptchaToken?: string) => Promise<{ 
     success: boolean; 
     error?: string; 
     rateLimited?: boolean; 
     remainingAttempts?: number;
     lockoutUntil?: string;
   }>
-  signUp: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>
+  signUp: (email: string, password: string, recaptchaToken?: string) => Promise<{ success: boolean; error?: string }>
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => subscription.unsubscribe()
   }, [supabase.auth])
 
-  const signIn = async (email: string, password: string, captchaToken?: string) => {
+  const signIn = async (email: string, password: string, recaptchaToken?: string) => {
     try {
       setLoading(true)
       
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, captchaToken }),
+        body: JSON.stringify({ email, password, recaptchaToken }),
       })
 
       const result = await response.json()
@@ -114,23 +114,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const signUp = async (email: string, password: string, captchaToken?: string) => {
+  const signUp = async (email: string, password: string, recaptchaToken?: string) => {
     try {
       setLoading(true)
       
-      // If captcha token is provided, verify it first
-      if (captchaToken) {
-        const verifyResponse = await fetch('/api/auth/verify-captcha', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ captchaToken }),
-        })
-        
-        const verifyResult = await verifyResponse.json()
-        if (!verifyResult.success) {
-          return { success: false, error: 'Captcha verification failed' }
+      // If reCAPTCHA token is provided, verify it first
+      if (recaptchaToken) {
+        try {
+          const verifyResponse = await fetch('/api/auth/verify-recaptcha', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ recaptchaToken }),
+          })
+          
+          const verifyResult = await verifyResponse.json()
+          if (!verifyResult.success) {
+            return { success: false, error: verifyResult.error || 'reCAPTCHA verification failed' }
+          }
+        } catch (error) {
+          console.error('reCAPTCHA verification error:', error)
+          return { success: false, error: 'reCAPTCHA verification failed' }
         }
       }
       

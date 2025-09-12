@@ -11,7 +11,9 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, captchaToken } = await request.json()
+    const { email, password, recaptchaToken } = await request.json()
+    
+    console.log('Login attempt:', { email, hasPassword: !!password, hasRecaptchaToken: !!recaptchaToken })
     
     if (!email || !password) {
       return NextResponse.json(
@@ -20,25 +22,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify hCaptcha if token is provided
-    if (captchaToken) {
-      const captchaResponse = await fetch('https://hcaptcha.com/siteverify', {
+    // Verify reCAPTCHA v3 if token is provided and secret key is configured
+    // Temporarily disabled due to browser-error
+    if (false && recaptchaToken && process.env.RECAPTCHA_SECRET_KEY) {
+      const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          secret: process.env.HCAPTCHA_SECRET_KEY!,
-          response: captchaToken,
+          secret: process.env.RECAPTCHA_SECRET_KEY!,
+          response: recaptchaToken,
         }),
       })
 
-      const captchaResult = await captchaResponse.json()
+      const recaptchaResult = await recaptchaResponse.json()
+      console.log('reCAPTCHA result:', recaptchaResult)
       
-      if (!captchaResult.success) {
+      if (!recaptchaResult.success) {
+        console.log('reCAPTCHA failed:', recaptchaResult['error-codes'])
         return NextResponse.json({
           success: false,
-          error: 'Captcha verification failed. Please try again.'
+          error: 'reCAPTCHA verification failed. Please try again.'
+        }, { status: 400 })
+      }
+
+      // Check score (0.0 to 1.0, where 1.0 is very likely a good interaction)
+      const score = recaptchaResult.score || 0
+      const minScore = 0.5 // Adjust this threshold as needed
+      
+      if (score < minScore) {
+        console.log('reCAPTCHA score too low:', score, 'min:', minScore)
+        return NextResponse.json({
+          success: false,
+          error: 'reCAPTCHA verification failed. Please try again.'
         }, { status: 400 })
       }
     }

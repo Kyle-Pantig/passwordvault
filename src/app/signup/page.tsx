@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import { Eye, EyeOff, ExternalLink, Check, X, Shield } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
 import { GoogleIcon } from '@/components/ui/google-icon'
-import { HCaptchaComponent, HCaptchaRef } from '@/components/ui/hcaptcha'
+import { useReCaptcha } from '@/components/ui/recaptcha-v3'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -30,11 +30,10 @@ export default function SignupPage() {
   const [showLegalDialog, setShowLegalDialog] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | 'very-strong'>('weak')
   const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
-  const [captchaError, setCaptchaError] = useState<string | null>(null)
-  const captchaRef = useRef<HCaptchaRef>(null)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
   const router = useRouter()
   const { user, loading: authLoading, signUp, signInWithGoogle, resendVerification } = useAuth()
+  const { generateToken } = useReCaptcha()
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -104,20 +103,6 @@ export default function SignupPage() {
     }
   }
 
-  const handleCaptchaVerify = (token: string) => {
-    setCaptchaToken(token)
-    setCaptchaError(null)
-  }
-
-  const handleCaptchaExpire = () => {
-    setCaptchaToken(null)
-    setCaptchaError('Captcha expired. Please complete it again.')
-  }
-
-  const handleCaptchaError = (error: any) => {
-    setCaptchaToken(null)
-    setCaptchaError('Captcha verification failed. Please try again.')
-  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -138,12 +123,6 @@ export default function SignupPage() {
       return
     }
 
-    // Check if captcha is required and completed
-    if (process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && !captchaToken) {
-      setCaptchaError('Please complete the captcha verification.')
-      return
-    }
-
     // Show legal dialog instead of immediate signup
     setShowLegalDialog(true)
   }
@@ -157,26 +136,20 @@ export default function SignupPage() {
     setShowLegalDialog(false)
     setLoading(true)
 
+    // Generate reCAPTCHA token
+    const token = await generateToken('signup')
+    setRecaptchaToken(token)
+
     try {
-      const result = await signUp(email, password, captchaToken || undefined)
+      const result = await signUp(email, password, token ?? undefined)
 
       if (!result.success) {
-        // Reset captcha on failed signup
-        if (captchaRef.current) {
-          captchaRef.current.reset()
-        }
-        setCaptchaToken(null)
         toast.error(result.error || 'Signup failed')
       } else {
         toast.success('Account created successfully! Please check your email to verify your account.')
         setSignupSuccess(true)
       }
     } catch (_error) {
-      // Reset captcha on error
-      if (captchaRef.current) {
-        captchaRef.current.reset()
-      }
-      setCaptchaToken(null)
       toast.error('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -429,25 +402,6 @@ export default function SignupPage() {
               </div>
             )}
             
-            {/* hCaptcha */}
-            {process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && (
-              <div className="space-y-2">
-                <HCaptchaComponent
-                  ref={captchaRef}
-                  onVerify={handleCaptchaVerify}
-                  onExpire={handleCaptchaExpire}
-                  onError={handleCaptchaError}
-                  theme="light"
-                  size="normal"
-                  className="flex justify-center"
-                />
-                {captchaError && (
-                  <p className="text-sm text-red-600 dark:text-red-400 text-center">
-                    {captchaError}
-                  </p>
-                )}
-              </div>
-            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating account...' : 'Sign Up'}
