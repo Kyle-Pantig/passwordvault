@@ -239,8 +239,7 @@ export class DatabaseService {
       user_id: user.id,
       name: categoryData.name,
       color: categoryData.color || '#3B82F6',
-      icon: categoryData.icon || 'folder',
-      description: categoryData.description || ''
+      icon: categoryData.icon || 'folder'
     }
     
     const { data, error } = await this.supabase
