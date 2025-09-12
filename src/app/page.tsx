@@ -179,9 +179,30 @@ export default function VaultPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      loadCredentials()
+      check2FAAndLoadCredentials()
     }
   }, [user, authLoading, router])
+
+  const check2FAAndLoadCredentials = async () => {
+    try {
+      // Check if user has 2FA enabled
+      const response = await fetch('/api/2fa/status')
+      const { twoFactorEnabled } = await response.json()
+      
+      if (twoFactorEnabled) {
+        // User has 2FA enabled, redirect to verification
+        router.push('/verify-2fa')
+        return
+      }
+      
+      // User doesn't have 2FA enabled, load credentials normally
+      loadCredentials()
+    } catch (error) {
+      console.error('Error checking 2FA status:', error)
+      // If there's an error checking 2FA status, load credentials normally
+      loadCredentials()
+    }
+  }
 
   const loadCredentials = async () => {
     try {
