@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, recaptchaToken } = await request.json()
     
-    console.log('Login attempt:', { email, hasPassword: !!password, hasRecaptchaToken: !!recaptchaToken })
-    
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
@@ -23,8 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify reCAPTCHA v3 if token is provided and secret key is configured
-    // Temporarily disabled due to browser-error
-    if (false && recaptchaToken && process.env.RECAPTCHA_SECRET_KEY) {
+    if (recaptchaToken && process.env.RECAPTCHA_SECRET_KEY) {
       const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
         method: 'POST',
         headers: {
@@ -37,10 +34,8 @@ export async function POST(request: NextRequest) {
       })
 
       const recaptchaResult = await recaptchaResponse.json()
-      console.log('reCAPTCHA result:', recaptchaResult)
       
       if (!recaptchaResult.success) {
-        console.log('reCAPTCHA failed:', recaptchaResult['error-codes'])
         return NextResponse.json({
           success: false,
           error: 'reCAPTCHA verification failed. Please try again.'
@@ -52,7 +47,6 @@ export async function POST(request: NextRequest) {
       const minScore = 0.5 // Adjust this threshold as needed
       
       if (score < minScore) {
-        console.log('reCAPTCHA score too low:', score, 'min:', minScore)
         return NextResponse.json({
           success: false,
           error: 'reCAPTCHA verification failed. Please try again.'
