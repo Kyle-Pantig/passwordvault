@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (existingProfile?.two_factor_secret) {
       secret = {
         base32: existingProfile.two_factor_secret,
-        otpauth_url: `otpauth://totp/Password%20Vault%20(${user.email})?secret=${existingProfile.two_factor_secret}&issuer=Password%20Vault`
+        otpauth_url: `otpauth://totp/DigiVault%20(${user.email})?secret=${existingProfile.two_factor_secret}&issuer=DigiVault`
       }
     } else {
       // Generate a new secret for TOTP
