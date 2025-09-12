@@ -31,9 +31,7 @@ export default function SettingsPage() {
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [isOAuthUser, setIsOAuthUser] = useState(false)
-  const [verificationCode, setVerificationCode] = useState('')
-  const [showVerificationCode, setShowVerificationCode] = useState(false)
-  const [verificationAction, setVerificationAction] = useState<'regenerate' | 'view'>('regenerate')
+  const [verificationAction, setVerificationAction] = useState<'regenerate' | 'view' | 'disable'>('regenerate')
   const [emailVerificationSent, setEmailVerificationSent] = useState(false)
   const [emailVerificationCode, setEmailVerificationCode] = useState('')
   const [showEmailVerification, setShowEmailVerification] = useState(false)
@@ -54,6 +52,10 @@ export default function SettingsPage() {
   const [showCurrentCodes, setShowCurrentCodes] = useState(false)
   const [passwordAccordionOpen, setPasswordAccordionOpen] = useState(false)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [showDisable2FADialog, setShowDisable2FADialog] = useState(false)
+  const [disable2FAPassword, setDisable2FAPassword] = useState('')
+  const [verifyingDisablePassword, setVerifyingDisablePassword] = useState(false)
+  const [showDisablePassword, setShowDisablePassword] = useState(false)
   
   const { darkMode, setDarkMode } = useDarkMode()
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
@@ -198,25 +200,14 @@ export default function SettingsPage() {
       // Redirect to 2FA setup
       router.push('/setup-2fa')
     } else {
-      // Disable 2FA
-      try {
-        const response = await fetch('/api/2fa/disable', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (response.ok) {
-          setTwoFactorEnabled(false)
-          setBackupCodes([])
-          toast.success('Two-factor authentication disabled')
-        } else {
-          const data = await response.json()
-          toast.error(data.error || 'Failed to disable 2FA')
-        }
-      } catch (_error) {
-        toast.error('Failed to disable 2FA')
+      // Check if user is OAuth user
+      if (isOAuthUser) {
+        // For OAuth users, use email verification
+        setVerificationAction('disable')
+        setShowEmailVerification(true)
+      } else {
+        // For regular users, use password verification
+        setShowDisable2FADialog(true)
       }
     }
   }
@@ -385,6 +376,23 @@ export default function SettingsPage() {
           } else {
             toast.error(codesData.error || 'Failed to fetch backup codes')
           }
+        } else if (verificationAction === 'disable') {
+          // Disable 2FA for OAuth users
+          const disableResponse = await fetch('/api/2fa/disable', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+
+          if (disableResponse.ok) {
+            setTwoFactorEnabled(false)
+            setBackupCodes([])
+            toast.success('Two-factor authentication disabled')
+          } else {
+            const disableData = await disableResponse.json()
+            toast.error(disableData.error || 'Failed to disable 2FA')
+          }
         }
         
         toast.success('Email verified successfully!')
@@ -469,6 +477,57 @@ export default function SettingsPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  const verifyPasswordForDisable2FA = async () => {
+    if (!disable2FAPassword) {
+      toast.error('Please enter your password')
+      return
+    }
+
+    try {
+      setVerifyingDisablePassword(true)
+      
+      // Verify password
+      const response = await fetch('/api/2fa/verify-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: disable2FAPassword }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Password is correct, now disable 2FA
+        const disableResponse = await fetch('/api/2fa/disable', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (disableResponse.ok) {
+          setTwoFactorEnabled(false)
+          setBackupCodes([])
+          setShowDisable2FADialog(false)
+          setDisable2FAPassword('')
+          toast.success('Two-factor authentication disabled')
+        } else {
+          const disableData = await disableResponse.json()
+          toast.error(disableData.error || 'Failed to disable 2FA')
+        }
+      } else {
+        toast.error(data.error || 'Incorrect password. Please try again.')
+        setDisable2FAPassword('')
+      }
+      
+    } catch (_error) {
+      toast.error('Failed to verify password')
+    } finally {
+      setVerifyingDisablePassword(false)
+    }
   }
 
   const copyIndividualCode = async (code: string) => {
@@ -1271,6 +1330,82 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Password Verification Dialog for Disabling 2FA */}
+      <Dialog open={showDisable2FADialog} onOpenChange={setShowDisable2FADialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <span>Disable Two-Factor Authentication</span>
+            </DialogTitle>
+            <DialogDescription>
+              Enter your password to disable two-factor authentication. This action will remove the extra security layer from your account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="disable-2fa-password">Current Password</Label>
+              <div className="relative">
+                <Input
+                  id="disable-2fa-password"
+                  type={showDisablePassword ? 'text' : 'password'}
+                  placeholder="Enter your current password"
+                  value={disable2FAPassword}
+                  onChange={(e) => setDisable2FAPassword(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      verifyPasswordForDisable2FA()
+                    }
+                  }}
+                  autoComplete="current-password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDisablePassword(!showDisablePassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showDisablePassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDisable2FADialog(false)
+                  setDisable2FAPassword('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={verifyPasswordForDisable2FA}
+                disabled={verifyingDisablePassword || !disable2FAPassword}
+                className="flex-1"
+                variant="destructive"
+              >
+                {verifyingDisablePassword ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Disable 2FA'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Email Verification Dialog for OAuth Users */}
       <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
         <DialogContent className="max-w-md">
@@ -1280,7 +1415,11 @@ export default function SettingsPage() {
               <span>Email Verification</span>
             </DialogTitle>
             <DialogDescription>
-              We've sent a verification code to your email address. Enter the code to {verificationAction === 'regenerate' ? 'generate new backup codes' : 'view current backup codes'}.
+              We've sent a verification code to your email address. Enter the code to {
+                verificationAction === 'regenerate' ? 'generate new backup codes' : 
+                verificationAction === 'view' ? 'view current backup codes' : 
+                'disable two-factor authentication'
+              }.
             </DialogDescription>
           </DialogHeader>
           
@@ -1332,8 +1471,9 @@ export default function SettingsPage() {
                 onClick={verifyEmailCode}
                 disabled={emailVerificationCode.length !== 6}
                 className="flex-1"
+                variant={verificationAction === 'disable' ? 'destructive' : 'default'}
               >
-                Verify & Continue
+                {verificationAction === 'disable' ? 'Verify & Disable 2FA' : 'Verify & Continue'}
               </Button>
             </div>
           </div>
