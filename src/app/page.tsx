@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { db } from '@/lib/database'
 import { Credential, CredentialType } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -126,6 +127,7 @@ export default function VaultPage() {
   const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'encrypted'>('csv')
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const supabase = createClient()
 
   // Form states
   const [formData, setFormData] = useState({
@@ -190,7 +192,15 @@ export default function VaultPage() {
       const { twoFactorEnabled } = await response.json()
       
       if (twoFactorEnabled) {
-        // User has 2FA enabled, redirect to verification
+        // Check if user has already been verified (via backup code or TOTP)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user?.user_metadata?.two_factor_verified) {
+          // User has been verified, load credentials normally
+          loadCredentials()
+          return
+        }
+        
+        // User has 2FA enabled but not verified, redirect to verification
         router.push('/verify-2fa')
         return
       }
@@ -203,6 +213,17 @@ export default function VaultPage() {
       loadCredentials()
     }
   }
+
+  // Clear verification flag when component unmounts (user logs out)
+  useEffect(() => {
+    return () => {
+      if (user) {
+        supabase.auth.updateUser({
+          data: { two_factor_verified: false }
+        }).catch(console.error)
+      }
+    }
+  }, [user, supabase])
 
   const loadCredentials = async () => {
     try {

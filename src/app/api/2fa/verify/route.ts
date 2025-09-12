@@ -83,6 +83,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Set a session flag to indicate successful 2FA verification
+    const { error: sessionError } = await supabase.auth.updateUser({
+      data: { two_factor_verified: true }
+    })
+
+    if (sessionError) {
+      // Silently fail - verification still succeeded
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('2FA verification error:', error)
