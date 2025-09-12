@@ -39,22 +39,9 @@ function Verify2FAContent() {
       const { twoFactorEnabled } = await response.json()
       
       if (!twoFactorEnabled) {
-        // User doesn't have 2FA enabled, check if they have a secret (setup in progress)
-        const setupResponse = await fetch('/api/2fa/setup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        if (setupResponse.ok) {
-          // User has a secret but 2FA not enabled yet, redirect to setup
-          router.push('/setup-2fa')
-        } else {
-          // User doesn't have 2FA setup, redirect to home
-          toast.success('Signed in successfully!')
-          router.push('/')
-        }
+        // User doesn't have 2FA enabled, redirect to home
+        toast.success('Signed in successfully!')
+        router.push('/')
       } else {
         setChecking2FA(false)
       }
