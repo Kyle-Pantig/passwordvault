@@ -42,3 +42,4 @@ next-env.d.ts
 stripe-cli.zip
 stripe.exe
 test-permissions.js
+socket-server.js
