@@ -244,13 +244,19 @@ const VaultPage = () => {
       const credentialsData = vaultData.credentials || []
       const categoriesData = vaultData.categories || []
       
+      console.log('🔍 Debug - Vault Data:', {
+        sharedFolders: sharedFoldersData,
+        categories: categoriesData,
+        credentials: credentialsData.length
+      })
+      
       // Add shared folders to categories list for display
       const sharedCategories = sharedFoldersData.map((folder: any) => ({
         id: `shared-${folder.folder_id}`,
         user_id: 'shared',
-        name: folder.folder_name,
-        color: folder.folder_color,
-        icon: folder.folder_icon,
+        name: folder.name || 'Unknown Folder',
+        color: folder.color || '#3B82F6',
+        icon: folder.icon || 'folder',
         created_at: folder.shared_at,
         updated_at: folder.shared_at,
         is_shared: true,
@@ -260,8 +266,12 @@ const VaultPage = () => {
         owner_email: folder.owner_email
       }))
       
+      console.log('🔍 Debug - Shared Categories:', sharedCategories)
+      
       // Combine regular categories with shared folders
       const allCategories = [...categoriesData, ...sharedCategories]
+      
+      console.log('🔍 Debug - All Categories:', allCategories)
       
       // Update the categories state to include shared folders
       setCategories(allCategories)

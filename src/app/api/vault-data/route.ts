@@ -221,12 +221,17 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
       .from('shared_folder_access')
       .select(`
         folder_id,
-        folder_name,
-        folder_color,
-        folder_icon,
         permission_level,
         shared_at,
         owner_email,
+        folder:categories!shared_folder_access_folder_id_fkey(
+          id,
+          name,
+          color,
+          icon,
+          created_at,
+          updated_at
+        ),
         credentials:folder_credentials(
           id,
           service_name,
@@ -244,6 +249,7 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
       .eq('status', 'accepted')
 
     if (error) {
+      console.error('Error fetching shared folders:', error)
       return { data: [], error }
     }
 
@@ -251,9 +257,9 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
       data: sharedFolders?.map((folder: any) => ({
         id: `shared-${folder.folder_id}`,
         user_id: 'shared',
-        name: folder.folder_name,
-        color: folder.folder_color,
-        icon: folder.folder_icon,
+        name: folder.folder?.name || 'Unknown Folder',
+        color: folder.folder?.color || '#3B82F6',
+        icon: folder.folder?.icon || 'folder',
         created_at: folder.shared_at,
         updated_at: folder.shared_at,
         is_shared: true,
@@ -266,6 +272,7 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
       error: null
     }
   } catch (error) {
+    console.error('Error in getSharedFoldersOptimized:', error)
     return { data: [], error }
   }
 }
