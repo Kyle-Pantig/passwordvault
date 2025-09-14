@@ -1281,8 +1281,8 @@ const VaultPage = () => {
     } else {
       // Handle shared folders
       if (selectedCategoryId && selectedCategoryId.startsWith('shared-')) {
-        const originalFolderId = selectedCategoryId.replace('shared-', '')
-        currentCredentials = credentials.filter(cred => cred.category_id === originalFolderId)
+        // For shared folders, filter by the shared category ID directly
+        currentCredentials = credentials.filter(cred => cred.category_id === selectedCategoryId)
       } else {
         currentCredentials = credentials.filter(cred => cred.category_id === selectedCategoryId)
       }
