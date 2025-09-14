@@ -71,7 +71,7 @@ const VaultPage = () => {
     const { data: vaultData, isLoading, error, refetch } = useVaultData()
     const queryClient = useQueryClient()
     const credentials = vaultData?.credentials || []
-    const categories = vaultData?.categories || []
+    const [categories, setCategories] = useState<any[]>(vaultData?.categories || [])
     const loading = isLoading
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -229,12 +229,42 @@ const VaultPage = () => {
     }
   }, [user, authLoading, router])
 
+  // Update categories when vaultData changes
+  useEffect(() => {
+    if (vaultData?.categories) {
+      setCategories(vaultData.categories)
+    }
+  }, [vaultData?.categories])
+
   // Process vault data when it changes
   useEffect(() => {
     if (vaultData) {
       // Process shared credentials and merge with regular credentials
       const sharedFoldersData = vaultData.sharedFolders || []
       const credentialsData = vaultData.credentials || []
+      const categoriesData = vaultData.categories || []
+      
+      // Add shared folders to categories list for display
+      const sharedCategories = sharedFoldersData.map((folder: any) => ({
+        id: `shared-${folder.folder_id}`,
+        user_id: 'shared',
+        name: folder.folder_name,
+        color: folder.folder_color,
+        icon: folder.folder_icon,
+        created_at: folder.shared_at,
+        updated_at: folder.shared_at,
+        is_shared: true,
+        shared_permission: folder.permission_level,
+        original_folder_id: folder.folder_id,
+        folder_id: folder.folder_id,
+        owner_email: folder.owner_email
+      }))
+      
+      // Combine regular categories with shared folders
+      const allCategories = [...categoriesData, ...sharedCategories]
+      
+      // Update the categories state to include shared folders
+      setCategories(allCategories)
       
       // Extract shared credentials from shared folders and add them to the main credentials list
       const sharedCredentials = sharedFoldersData.flatMap((folder: any) => 
