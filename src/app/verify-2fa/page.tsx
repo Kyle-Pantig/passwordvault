@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

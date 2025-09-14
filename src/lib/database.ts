@@ -88,7 +88,7 @@ export class DatabaseService {
       }
 
       // Decrypt passwords, usernames, and custom fields
-      return data.map(cred => {
+      return data.map((cred: any) => {
         let decryptedPassword = cred.password
         let decryptedUsername = cred.username
         let decryptedCustomFields = cred.custom_fields || []

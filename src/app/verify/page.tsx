@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
