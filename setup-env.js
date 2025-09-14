@@ -18,6 +18,18 @@ ENCRYPTION_KEY=${encryptionKey}
 # hCaptcha Configuration (get from https://dashboard.hcaptcha.com/)
 NEXT_PUBLIC_HCAPTCHA_SITE_KEY=your_hcaptcha_site_key_here
 HCAPTCHA_SECRET_KEY=your_hcaptcha_secret_key_here
+
+# Resend Email Service (get from https://resend.com/)
+RESEND_API_KEY=your_resend_api_key_here
+
+# Stripe Payment (optional - get from https://stripe.com/)
+STRIPE_SECRET_KEY=your_stripe_secret_key_here
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key_here
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
 `;
 
 fs.writeFileSync('.env.local', envContent);
