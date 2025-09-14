@@ -27,7 +27,7 @@ function VerifyContent() {
         setMessage('Your email has already been verified!')
         toast.success('Email already verified!')
         setTimeout(() => {
-          router.push('/')
+          router.push('/vault')
         }, 2000)
         return
       }
@@ -58,7 +58,7 @@ function VerifyContent() {
             setMessage('Your email has already been verified!')
             toast.success('Email already verified!')
             setTimeout(() => {
-              router.push('/')
+              router.push('/vault')
             }, 2000)
             return
           } else {
@@ -78,7 +78,7 @@ function VerifyContent() {
             setMessage('Your email has been successfully verified!')
             toast.success('Email verified successfully!')
             setTimeout(() => {
-              router.push('/')
+              router.push('/vault')
             }, 2000)
             return
           } else {
@@ -98,7 +98,7 @@ function VerifyContent() {
         
         // Auto login after successful verification
         setTimeout(() => {
-          router.push('/')
+          router.push('/vault')
         }, 2000)
       }
     } catch (error) {

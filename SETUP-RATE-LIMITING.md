@@ -1,6 +1,6 @@
 # Rate Limiting Setup Guide
 
-This guide will help you set up login attempt rate limiting for your password vault application.
+This guide will help you set up login attempt rate limiting for your digivault application.
 
 ## Prerequisites
 

@@ -165,7 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/verify-2fa`,
         }
       })
 
@@ -195,6 +195,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Clear 2FA verification flag from session storage
         sessionStorage.removeItem('2fa_verified')
         toast.success('Signed out successfully')
+        
+        // Redirect to home page after successful logout
+        if (typeof window !== 'undefined') {
+          window.location.href = '/'
+        }
       }
     } catch (_error) {
       toast.error('Error signing out')

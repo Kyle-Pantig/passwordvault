@@ -1,6 +1,6 @@
 # Login Attempt Rate Limiting Implementation
 
-This document describes the implementation of login attempt rate limiting for the password vault application.
+This document describes the implementation of login attempt rate limiting for the digivault application.
 
 ## Overview
 

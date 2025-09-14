@@ -124,118 +124,45 @@
     @apply border-border outline-ring/50;
   }
 
-  /* Smooth transitions for theme switching */
+  /* Optimized smooth transitions for theme switching */
   * {
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                fill 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                stroke 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s ease-in-out, 
+                border-color 0.2s ease-in-out, 
+                color 0.2s ease-in-out;
   }
 
-  /* Ensure smooth transitions for CSS custom properties */
-  :root {
+  /* Disable transitions on root elements to prevent flash */
+  :root, .dark {
     transition: none;
   }
 
-  .dark {
-    transition: none;
-  }
-
-  /* Specific elements that should transition smoothly */
+  /* Smooth transitions for body */
   body {
     @apply bg-background text-foreground;
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s ease-in-out, 
+                color 0.2s ease-in-out;
   }
 
-  /* Enhanced transitions for interactive elements */
+  /* Optimized transitions for interactive elements */
   button, .btn, [role="button"] {
-    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.15s ease-in-out, 
+                border-color 0.15s ease-in-out, 
+                color 0.15s ease-in-out,
+                transform 0.15s ease-in-out;
   }
 
   /* Smooth transitions for form elements */
   input, textarea, select {
-    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.15s ease-in-out, 
+                border-color 0.15s ease-in-out, 
+                color 0.15s ease-in-out;
   }
 
   /* Smooth transitions for cards and components */
-  .card, [data-theme-transition] {
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Smooth transitions for navigation */
-  nav, nav * {
-    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Enhanced transitions during theme switching */
-  .theme-transitioning * {
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                fill 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                stroke 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
-
-  /* Special background transition effect */
-  .theme-transitioning body {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .theme-transitioning body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, 
-      rgba(59, 130, 246, 0.1), 
-      rgba(147, 51, 234, 0.1), 
-      rgba(236, 72, 153, 0.1)
-    );
-    opacity: 0;
-    animation: themeTransitionOverlay 0.4s ease-out;
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  @keyframes themeTransitionOverlay {
-    0% {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-    50% {
-      opacity: 0.3;
-      transform: scale(1.1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(1);
-    }
-  }
-
-  /* Disable transitions during initial load to prevent flash */
-  .no-transition * {
-    transition: none !important;
+  .card {
+    transition: background-color 0.2s ease-in-out, 
+                border-color 0.2s ease-in-out, 
+                color 0.2s ease-in-out;
   }
 }
 

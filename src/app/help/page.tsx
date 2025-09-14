@@ -16,7 +16,9 @@ import {
   Smartphone, 
   Mail, 
   Key,
-  ExternalLink
+  ExternalLink,
+  Folder,
+  RefreshCw
 } from 'lucide-react'
 
 export default function HelpPage() {
@@ -30,7 +32,7 @@ export default function HelpPage() {
       content: [
         {
           question: 'How do I add my first credential?',
-          answer: 'Click the "Add Credential" button in the top right corner or use the floating + button on mobile. Fill in the service name, URL (optional), username/email, and password. You can choose from predefined services or create a custom one.'
+          answer: 'Click the "Add Credential" button in the top right corner or use the floating + button on mobile. Fill in the service name, URL (optional), username/email, and password. You can choose from predefined services or create a custom one. You can also organize credentials into folders for better management.'
         },
         {
           question: 'What services are supported?',
@@ -39,6 +41,10 @@ export default function HelpPage() {
         {
           question: 'How do I search for credentials?',
           answer: 'Use the search bar at the top of the vault page. You can search by service name or username/email. The search is case-insensitive and updates in real-time.'
+        },
+        {
+          question: 'How do I create folders to organize my credentials?',
+          answer: 'Click the "New Folder" button in the vault to create a new folder. Give it a name and optional color. You can then move credentials into folders by editing them and selecting the desired folder from the dropdown.'
         }
       ]
     },
@@ -62,6 +68,68 @@ export default function HelpPage() {
         {
           question: 'How do I view my password?',
           answer: 'Click the eye icon (👁️) next to your password to toggle visibility. Click it again to hide the password.'
+        },
+        {
+          question: 'How do I generate a strong password?',
+          answer: 'Click the "Generate" button next to any password field. Choose from different strength levels (Strong, Very Strong, API Key) and the system will create a secure password for you. You can then apply it to replace your current password.'
+        },
+        {
+          question: 'What types of credentials can I store?',
+          answer: 'You can store two types of credentials: Basic (username/password) and Advanced (custom fields like API keys, tokens, etc.). Advanced credentials allow you to store any type of sensitive information with custom field names.'
+        }
+      ]
+    },
+    {
+      id: 'folders-organization',
+      title: 'Folders & Organization',
+      icon: <Folder className="h-5 w-5" />,
+      content: [
+        {
+          question: 'How do I create a new folder?',
+          answer: 'In the vault, click the "New Folder" button. Enter a name for your folder and optionally choose a color. Click "Create Folder" to save it.'
+        },
+        {
+          question: 'How do I move credentials to a folder?',
+          answer: 'Edit any credential and select a folder from the "Category" dropdown. Save the changes to move the credential to that folder.'
+        },
+        {
+          question: 'How do I rename or delete a folder?',
+          answer: 'Click the three-dot menu (⋮) on any folder and select "Rename" or "Delete". When deleting a folder, you can choose to move credentials to another folder or delete them entirely.'
+        },
+        {
+          question: 'Can I have credentials without a folder?',
+          answer: 'Yes! Credentials without a folder are shown in the "Uncategorized" section. You can organize them into folders later or leave them uncategorized.'
+        },
+        {
+          question: 'How do I view all credentials in a folder?',
+          answer: 'Click on any folder to view only the credentials in that folder. Use the back button or click "All Credentials" to return to the full view.'
+        }
+      ]
+    },
+    {
+      id: 'password-generation',
+      title: 'Password Generation',
+      icon: <RefreshCw className="h-5 w-5" />,
+      content: [
+        {
+          question: 'How does password generation work?',
+          answer: 'Our built-in password generator creates cryptographically secure passwords using industry-standard algorithms. You can generate passwords for any credential type including basic passwords and API keys.'
+        },
+        {
+          question: 'What password strength options are available?',
+          answer: 'We offer three strength levels: Strong (12-16 chars), Very Strong (20+ chars), and API Key (32+ chars with specific character sets). Each level is optimized for different use cases.'
+        },
+        {
+          question: 'How do I generate a password for an existing credential?',
+          answer: 'Click the "Generate" button next to any password field. Review the generated password and click "Replace Credential" to apply it, or "Cancel" to keep your current password.'
+        },
+        {
+          question: 'Can I generate passwords for API keys and tokens?',
+          answer: 'Yes! For advanced credentials, you can generate secure API keys and tokens. The generator creates appropriate character sets for different credential types.'
+        },
+        {
+          question: 'Are generated passwords secure?',
+          answer: 'Absolutely! All generated passwords use cryptographically secure random number generation and include a mix of uppercase, lowercase, numbers, and special characters.'
         }
       ]
     },
@@ -210,7 +278,7 @@ export default function HelpPage() {
               Help & Support
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Find answers to common questions and learn how to use your password vault effectively.
+              Find answers to common questions and learn how to use your digivault effectively.
             </p>
           </div>
 
@@ -238,7 +306,7 @@ export default function HelpPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Button
                   variant="outline"
                   className="h-auto p-4 flex flex-col items-start space-y-2"
@@ -251,6 +319,34 @@ export default function HelpPage() {
                   <div className="text-left">
                     <div className="font-medium">Add Credential</div>
                     <div className="text-sm text-gray-500">Learn how to add passwords</div>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start space-y-2"
+                  onClick={() => {
+                    setSearchTerm('folder')
+                    document.querySelector('[data-value="folders-organization"]')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                >
+                  <Folder className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Create Folders</div>
+                    <div className="text-sm text-gray-500">Organize your credentials</div>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start space-y-2"
+                  onClick={() => {
+                    setSearchTerm('generate password')
+                    document.querySelector('[data-value="password-generation"]')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                >
+                  <RefreshCw className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Generate Password</div>
+                    <div className="text-sm text-gray-500">Create strong passwords</div>
                   </div>
                 </Button>
                 <Button

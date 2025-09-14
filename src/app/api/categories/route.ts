@@ -39,6 +39,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(category)
   } catch (error) {
     console.error('Category creation error:', error)
+    
+    // Check if it's a duplicate name error
+    if (error instanceof Error && error.message.includes('already exists')) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    
+    // Check if it's a validation error
+    if (error instanceof Error && error.message.includes('required')) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

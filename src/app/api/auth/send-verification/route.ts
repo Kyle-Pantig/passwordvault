@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
+import { encrypt } from '@/lib/encryption'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -21,11 +22,14 @@ export async function POST(request: NextRequest) {
     // Store the verification code in the database with expiration (5 minutes)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
     
+    // Encrypt the verification code before storing
+    const encryptedCode = encrypt(verificationCode)
+    
     const { error: insertError } = await supabase
       .from('email_verification_codes')
       .insert({
         user_id: user.id,
-        code: verificationCode,
+        code: encryptedCode,
         expires_at: expiresAt.toISOString(),
         purpose: 'backup_codes_verification'
       })

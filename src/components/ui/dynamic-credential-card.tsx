@@ -7,14 +7,17 @@ import { Label } from '@/components/ui/label'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Copy, Edit, Trash2, MoreVertical, ExternalLink, AlertTriangle, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Copy, Edit, Trash2, MoreVertical, ExternalLink, AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Credential, } from '@/lib/types'
+import { generateStrongPassword, PASSWORD_PRESETS, GeneratedPassword } from '@/lib/password-generator'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import Image from 'next/image'
 
 interface DynamicCredentialCardProps {
   credential: Credential
   onEdit: (credential: Credential) => void
   onDelete: (credential: Credential) => void
+  onUpdate: (credential: Credential) => void
   visiblePasswords: Set<string>
   onTogglePasswordVisibility: (id: string) => void
   securityIssues?: {
@@ -22,6 +25,9 @@ interface DynamicCredentialCardProps {
     isReused: boolean
     strength: string | null
   }
+  isReadOnly?: boolean
+  isShared?: boolean
+  isOwner?: boolean
 }
 
 // Define fallback services for favicon loading
@@ -31,13 +37,21 @@ export function DynamicCredentialCard({
   credential, 
   onEdit, 
   onDelete, 
+  onUpdate,
   visiblePasswords, 
   onTogglePasswordVisibility,
-  securityIssues = { isWeak: false, isReused: false, strength: null }
+  securityIssues = { isWeak: false, isReused: false, strength: null },
+  isReadOnly = false,
+  isShared = false,
+  isOwner = true
 }: DynamicCredentialCardProps) {
+  
   const [imageError, setImageError] = useState(false)
   const [currentSrc, setCurrentSrc] = useState('')
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0)
+  const [generatedPassword, setGeneratedPassword] = useState<GeneratedPassword | null>(null)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [targetFieldId, setTargetFieldId] = useState<string | null>(null)
 
   const getFaviconServiceUrl = (url: string, service: 'duckduckgo' | 'faviconio' | 'direct'): string => {
     try {
@@ -124,6 +138,44 @@ export function DynamicCredentialCard({
     }
   }
 
+  const generatePassword = (fieldId?: string) => {
+    try {
+      // Choose preset based on credential type
+      const preset = credential.credential_type === 'advanced' ? PASSWORD_PRESETS.api : PASSWORD_PRESETS.strong
+      const password = generateStrongPassword(preset)
+      
+      setGeneratedPassword(password)
+      setTargetFieldId(fieldId || null)
+      setShowPasswordDialog(true)
+    } catch (error) {
+      toast.error('Failed to generate password')
+    }
+  }
+
+  const applyGeneratedPassword = () => {
+    if (!generatedPassword) return
+
+    const updatedCredential = { ...credential }
+
+    if (credential.credential_type === 'basic') {
+      // Update basic credential password
+      updatedCredential.password = generatedPassword.password
+    } else if (credential.credential_type === 'advanced' && targetFieldId) {
+      // Update advanced credential field
+      updatedCredential.custom_fields = credential.custom_fields.map(field => 
+        field.id === targetFieldId 
+          ? { ...field, value: generatedPassword.password }
+          : field
+      )
+    }
+
+    onUpdate(updatedCredential)
+    setShowPasswordDialog(false)
+    setGeneratedPassword(null)
+    setTargetFieldId(null)
+    toast.success('Credential updated successfully')
+  }
+
   const renderBasicCredentialFields = () => {
     if (credential.credential_type !== 'basic') return null
 
@@ -154,7 +206,20 @@ export function DynamicCredentialCard({
         
         {credential.password && (
           <div>
-            <Label className="text-sm text-gray-500 dark:text-gray-400">Password</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Password</Label>
+              {!isReadOnly && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generatePassword()}
+                  className="h-6 px-2 text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Generate
+                </Button>
+              )}
+            </div>
             <div className="relative mt-1">
               <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                 <p className="text-sm font-mono px-3 py-2 flex-1 min-h-[40px] flex items-center truncate">
@@ -193,20 +258,35 @@ export function DynamicCredentialCard({
   const renderAdvancedCredentialFields = () => {
     if (credential.credential_type !== 'advanced' || !credential.custom_fields?.length) return null
 
-    const visibleFields = credential.custom_fields.filter(field => field.isVisible && field.name.trim())
+    const visibleFields = credential.custom_fields.filter(field => field.value.trim())
 
     return (
       <div className="space-y-2">
         <div className="space-y-3">
           {visibleFields.map((field) => (
             <div key={field.id}>
-              <Label className="text-sm text-gray-500 dark:text-gray-400">TEXT</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-gray-500 dark:text-gray-400">
+                  TEXT
+                </Label>
+                {field.isMasked && !isReadOnly && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generatePassword(field.id)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Generate
+                  </Button>
+                )}
+              </div>
               <div className="relative mt-1">
                 <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                   <p className="text-sm font-mono px-3 py-2 flex-1 min-h-[40px] flex items-center truncate">
                     {field.isMasked && !visiblePasswords.has(`${credential.id}-${field.id}`) 
                       ? '••••••••' 
-                      : field.value || field.name
+                      : field.value
                     }
                   </p>
                   <div className="flex items-center border-l border-gray-200 dark:border-gray-700">
@@ -228,7 +308,7 @@ export function DynamicCredentialCard({
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-none rounded-r"
-                      onClick={() => copyToClipboard(field.value || field.name, 'Copied to clipboard!')}
+                      onClick={() => copyToClipboard(field.value, 'Copied to clipboard!')}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -243,6 +323,7 @@ export function DynamicCredentialCard({
   }
 
   return (
+    <>
     <Card className={`hover:shadow-lg transition-shadow ${
       securityIssues.isWeak ? 'border-l-4 border-l-red-500' : 
       securityIssues.isReused ? 'border-l-4 border-l-orange-500' : ''
@@ -268,20 +349,20 @@ export function DynamicCredentialCard({
               )}
               
               {/* Security Indicators */}
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-wrap items-center gap-1 mt-1">
                 {securityIssues.isWeak && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium flex-shrink-0">
                     <AlertTriangle className="h-3 w-3" />
-                    {securityIssues.strength?.replace('-', ' ').toUpperCase() || 'WEAK'}
+                    {securityIssues.strength?.replace('-', ' ').toUpperCase() || 'SECURITY ISSUE'}
                   </span>
                 )}
                 {securityIssues.isReused && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded text-xs font-medium">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded text-xs font-medium flex-shrink-0">
                     <AlertCircle className="h-3 w-3" />
                     REUSED
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium flex-shrink-0">
                   {credential.credential_type === 'basic' ? 'Basic' : 'Advanced'}
                 </span>
               </div>
@@ -307,16 +388,21 @@ export function DynamicCredentialCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(credential)}>
+              <DropdownMenuItem 
+                onClick={() => !isReadOnly && onEdit(credential)}
+                disabled={isReadOnly}
+                className={isReadOnly ? "opacity-50 cursor-not-allowed" : ""}
+              >
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {isReadOnly ? "Edit (Read-only)" : "Edit"}
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => onDelete(credential)}
-                className="text-red-600"
+                onClick={() => !isReadOnly && !(isShared && !isOwner) && onDelete(credential)}
+                disabled={isReadOnly || (isShared && !isOwner)}
+                className={`text-red-600 ${isReadOnly || (isShared && !isOwner) ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                {isReadOnly ? "Delete (Read-only)" : (isShared && !isOwner) ? "Delete (Owner Only)" : "Delete"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -350,5 +436,47 @@ export function DynamicCredentialCard({
          </Accordion>
        </CardContent>
     </Card>
+
+    {/* Password Generation Confirmation Dialog */}
+    <AlertDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Generated Strong Credential</AlertDialogTitle>
+          <AlertDialogDescription>
+            A new strong credential has been generated. Do you want to replace the current value with this one?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        
+        {generatedPassword && (
+          <div className="my-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Generated Credential:</span>
+              <span className={`text-xs px-2 py-1 rounded ${
+                generatedPassword?.strength === 'very-strong' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                generatedPassword?.strength === 'strong' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                generatedPassword?.strength === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+              }`}>
+                {generatedPassword?.strength?.replace('-', ' ').toUpperCase()}
+              </span>
+            </div>
+            <div className="font-mono text-sm bg-white dark:bg-gray-900 p-2 rounded border break-all">
+              {generatedPassword?.password}
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Length: {generatedPassword?.password?.length} characters
+            </div>
+          </div>
+        )}
+        
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={applyGeneratedPassword}>
+            Replace Credential
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

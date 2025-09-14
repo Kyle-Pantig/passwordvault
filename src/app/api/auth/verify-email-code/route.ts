@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { decrypt } from '@/lib/encryption'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,14 +24,31 @@ export async function POST(request: NextRequest) {
       .from('email_verification_codes')
       .select('*')
       .eq('user_id', user.id)
-      .eq('code', code)
       .eq('purpose', 'backup_codes_verification')
       .gte('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
 
-    if (fetchError || !verificationData) {
+    if (fetchError || !verificationData || verificationData.length === 0) {
+      return NextResponse.json({ error: 'Invalid or expired verification code' }, { status: 400 })
+    }
+
+    // Check each stored code (decrypt and compare)
+    let validCode: any = null
+    for (const verificationRecord of verificationData) {
+      try {
+        const decryptedCode = decrypt(verificationRecord.code)
+        if (decryptedCode === code) {
+          validCode = verificationRecord
+          break
+        }
+      } catch (error) {
+        // Skip invalid encrypted codes
+        console.error('Failed to decrypt verification code:', error)
+        continue
+      }
+    }
+
+    if (!validCode) {
       return NextResponse.json({ error: 'Invalid or expired verification code' }, { status: 400 })
     }
 
@@ -38,7 +56,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('email_verification_codes')
       .delete()
-      .eq('id', verificationData.id)
+      .eq('id', validCode.id)
 
     return NextResponse.json({ success: true, message: 'Email verification successful' })
   } catch (error) {

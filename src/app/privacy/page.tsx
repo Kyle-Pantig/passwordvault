@@ -32,12 +32,31 @@ export default function PrivacyPage() {
                 <li>Two-factor authentication settings</li>
               </ul>
               
-              <h4 className="font-semibold text-gray-900 dark:text-white">Stored Credentials:</h4>
+              <h4 className="font-semibold text-gray-900 dark:text-white">Basic Credential Data:</h4>
               <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300 ml-4">
                 <li>Service names and URLs</li>
-                <li>Usernames (encrypted)</li>
+                <li>Usernames or email addresses (encrypted)</li>
                 <li>Passwords (encrypted)</li>
                 <li>Notes and additional information</li>
+                <li>Creation and modification timestamps</li>
+              </ul>
+              
+              <h4 className="font-semibold text-gray-900 dark:text-white">Advanced Credential Data:</h4>
+              <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300 ml-4">
+                <li>Custom field names and values (encrypted)</li>
+                <li>Field-specific masking and visibility settings</li>
+                <li>API keys, tokens, and certificates (encrypted)</li>
+                <li>OAuth tokens and authentication codes (encrypted)</li>
+                <li>SSH keys and other complex credentials (encrypted)</li>
+              </ul>
+              
+              <h4 className="font-semibold text-gray-900 dark:text-white">Folder/Category Data:</h4>
+              <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300 ml-4">
+                <li>Folder names, colors, and icons</li>
+                <li>Category descriptions and metadata</li>
+                <li>Credential-to-folder associations</li>
+                <li>Hierarchical organization structure</li>
+                <li>Bulk operation preferences and settings</li>
               </ul>
               
               <h4 className="font-semibold text-gray-900 dark:text-white">Security Analysis Data:</h4>
@@ -77,7 +96,47 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>3. Security Analysis and Privacy</CardTitle>
+            <CardTitle>3. Credential Management and Processing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-300">
+              DigiVault processes different types of credential data with specific purposes and security measures:
+            </p>
+            
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white">Basic Credential Processing:</h4>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 ml-4">
+                <li><strong>Authentication Storage:</strong> Secure storage of username/password combinations for web services</li>
+                <li><strong>Service Integration:</strong> Automatic URL detection and service icon fetching for better organization</li>
+                <li><strong>Password Generation:</strong> Creation of strong passwords using configurable presets and algorithms</li>
+                <li><strong>Security Analysis:</strong> Real-time password strength assessment and security recommendations</li>
+                <li><strong>Access Control:</strong> Secure credential access with visibility controls and copy-to-clipboard functionality</li>
+              </ul>
+
+              <h4 className="font-semibold text-gray-900 dark:text-white">Advanced Credential Processing:</h4>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 ml-4">
+                <li><strong>Custom Field Management:</strong> Flexible storage and organization of complex authentication data</li>
+                <li><strong>Field-Level Security:</strong> Individual encryption and masking controls for each custom field</li>
+                <li><strong>Multi-Format Support:</strong> Processing of various credential types (API keys, tokens, certificates, etc.)</li>
+                <li><strong>Dynamic Generation:</strong> Field-specific password and value generation based on credential type</li>
+                <li><strong>Complex Authentication:</strong> Support for OAuth flows, API authentication, and multi-step login processes</li>
+              </ul>
+
+              <h4 className="font-semibold text-gray-900 dark:text-white">Folder/Category Processing:</h4>
+              <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 ml-4">
+                <li><strong>Organization Management:</strong> Creation and maintenance of hierarchical folder structures</li>
+                <li><strong>Credential Grouping:</strong> Association and management of credentials within specific categories</li>
+                <li><strong>Bulk Operations:</strong> Mass management of credentials within folders (export, delete, move)</li>
+                <li><strong>Visual Organization:</strong> Color-coding and icon management for improved user experience</li>
+                <li><strong>Search and Filtering:</strong> Category-based search and filtering functionality</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>4. Security Analysis and Privacy</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -98,7 +157,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>4. Data Security</CardTitle>
+            <CardTitle>5. Data Security</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -116,7 +175,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>5. Data Storage and Retention</CardTitle>
+            <CardTitle>6. Data Storage and Retention</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -130,7 +189,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>6. Cookies and Tracking</CardTitle>
+            <CardTitle>7. Cookies and Tracking</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -141,7 +200,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>7. Your Rights</CardTitle>
+            <CardTitle>8. Your Rights</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -160,7 +219,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>8. Third-Party Services</CardTitle>
+            <CardTitle>9. Third-Party Services</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -178,7 +237,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>9. Children's Privacy</CardTitle>
+            <CardTitle>10. Children's Privacy</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -189,7 +248,7 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>10. Changes to This Policy</CardTitle>
+            <CardTitle>11. Changes to This Policy</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -200,15 +259,15 @@ export default function PrivacyPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>11. Contact Us</CardTitle>
+            <CardTitle>12. Contact Us</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">
               If you have any questions about this Privacy Policy, please contact us at:
             </p>
             <p className="text-gray-700 dark:text-gray-300">
-              Email: privacy@PasswordVault.app<br />
-              Website: https://PasswordVault.app<br />
+              Email: privacy@digivault.app<br />
+              Website: https://digivault.app<br />
             </p>
           </CardContent>
         </Card>

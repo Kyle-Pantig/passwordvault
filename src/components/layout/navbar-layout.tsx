@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
+import { useSecurityStatus } from '@/hooks/use-security-status'
 import { Button } from '@/components/ui/button'
-import { useDarkMode } from '@/contexts/dark-mode-context'
+import { cn } from '@/lib/utils'
+import { useTheme } from 'next-themes'
 import { 
   ArrowLeft, 
   Shield, 
@@ -15,6 +17,7 @@ import {
   HelpCircle,
   AlertTriangle
 } from 'lucide-react'
+import { InvitationsNotification } from '@/components/ui/invitations-notification'
 import { LoaderThree } from '@/components/ui/loader'
 import { 
   Navbar, 
@@ -29,31 +32,42 @@ import {
 
 export default function NavbarLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { darkMode, toggleDarkMode } = useDarkMode()
+  const { theme, setTheme } = useTheme()
+  const darkMode = theme === 'dark'
+  const toggleDarkMode = () => setTheme(theme === 'dark' ? 'light' : 'dark')
   const { user, loading: authLoading, signOut } = useAuth()
+  const securityStatus = useSecurityStatus()
   const router = useRouter()
   const pathname = usePathname()
 
-  // Navbar items
-  const navItems = [
-    { name: 'Vault', link: '/' },
-    { name: 'Security', link: '/security' },
+  // Navbar items - different for authenticated vs unauthenticated users
+  const navItems = user ? [
+    { name: 'Vault', link: '/vault' },
+    { 
+      name: 'Security', 
+      link: '/security',
+      hasSecurityIssues: securityStatus.hasIssues,
+      riskLevel: securityStatus.riskLevel
+    },
     { name: 'Settings', link: '/settings' },
     { name: 'Help', link: '/help' }
-  ]
+  ] : []
 
   const handleLogout = async () => {
     await signOut()
-    router.push('/login')
   }
 
   const handleSignIn = () => {
     router.push('/login')
   }
 
+  const handleSignUp = () => {
+    router.push('/signup')
+  }
+
   const getPageTitle = () => {
     switch (pathname) {
-      case '/':
+      case '/vault':
         return 'DigiVault'
       case '/security':
         return 'Security Analysis'
@@ -72,7 +86,7 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
 
   const getPageIcon = () => {
     switch (pathname) {
-      case '/':
+      case '/vault':
         return <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
       case '/security':
         return <AlertTriangle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
@@ -110,8 +124,8 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
     )
   }
 
-  // Don't show navbar if user is not authenticated on protected pages
-  if (!user && (pathname === '/' || pathname.startsWith('/settings') || pathname.startsWith('/setup-2fa'))) {
+  // Don't show navbar if user is not authenticated on protected pages (except home page)
+  if (!user && (pathname.startsWith('/settings') || pathname.startsWith('/setup-2fa'))) {
     return <>{children}</>
   }
 
@@ -122,8 +136,10 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       {/* Resizable Navbar */}
       <Navbar>
-        <NavBody>
-          <div className="flex items-center space-x-2">
+        {/* Desktop Navigation - Hidden on mobile */}
+        <NavBody className="hidden lg:block">
+          <div className="flex justify-between items-center space-x-2">
+            <div className="flex items-center space-x-2">
             {shouldShowBackButton() && (
               <Button
                 variant="ghost"
@@ -138,11 +154,8 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
             <span className="text-xl font-bold text-gray-900 dark:text-white">
               {getPageTitle()}
             </span>
-          </div>
-          
-          <NavItems items={navItems} />
-          
-          <div className="flex items-center space-x-2 relative z-50">
+            </div>
+            <div className="flex items-center space-x-2 relative z-50">
             <NavbarButton
               as="button"
               onClick={toggleDarkMode}
@@ -151,29 +164,49 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
             >
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </NavbarButton>
-            <NavbarButton
-              as="button"
-              onClick={user ? handleLogout : handleSignIn}
-              variant="secondary"
-              className="flex items-center space-x-2"
-            >
-              {user ? (
-                <>
+            {user ? (
+              <>
+                <InvitationsNotification />
+                <NavbarButton
+                  as="button"
+                  onClick={handleLogout}
+                  variant="secondary"
+                  className="flex items-center space-x-2"
+                >
                   <LogOut className="h-4 w-4" />
                   <span>Logout</span>
-                </>
-              ) : (
-                <>
-                  <LogOut className="h-4 w-4" />
-                  <span>Sign in</span>
-                </>
-              )}
-            </NavbarButton>
+                </NavbarButton>
+              </>
+            ) : (
+              <>
+                <NavbarButton
+                  as="button"
+                  onClick={handleSignIn}
+                  variant="secondary"
+                  className="flex items-center space-x-2"
+                >
+                  <span>Sign In</span>
+                </NavbarButton>
+                <NavbarButton
+                  as="button"
+                  onClick={handleSignUp}
+                  variant="primary"
+                  className="flex items-center space-x-2"
+                >
+                  <span>Sign Up</span>
+                </NavbarButton>
+              </>
+            )}
           </div>
+          </div>
+          
+          <NavItems items={navItems} />
+          
+         
         </NavBody>
 
-        {/* Mobile Navigation */}
-        <MobileNav>
+        {/* Mobile Navigation - Hidden on desktop */}
+        <MobileNav className="block lg:hidden">
           <MobileNavHeader>
             <div className="flex items-center space-x-2">
               {shouldShowBackButton() && (
@@ -202,42 +235,119 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
             onClose={() => setIsMobileMenuOpen(false)}
           >
             <div className="flex flex-col space-y-4 w-full">
-              {navItems.map((item, idx) => (
-                <a
-                  key={idx}
-                  href={item.link}
-                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.name}
-                </a>
-              ))}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleDarkMode}
-                  className="flex items-center space-x-2"
-                >
-                  {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={user ? handleLogout : handleSignIn}
-                  className="flex items-center space-x-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>{user ? 'Logout' : 'Sign in'}</span>
-                </Button>
-              </div>
+              {navItems.length > 0 && (
+                <>
+                  {navItems.map((item, idx) => (
+                    <a
+                      key={idx}
+                      href={item.link}
+                      className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                      {item.hasSecurityIssues && (
+                        <div
+                          className={cn(
+                            "ml-2 h-2 w-2 rounded-full border border-white dark:border-gray-900",
+                            item.riskLevel === 'low' && "bg-yellow-500",
+                            item.riskLevel === 'moderate' && "bg-orange-500",
+                            item.riskLevel === 'high' && "bg-red-500",
+                            item.riskLevel === 'critical' && "bg-red-600 animate-pulse"
+                          )}
+                          title={`Security issues detected: ${item.riskLevel} risk level`}
+                        />
+                      )}
+                    </a>
+                  ))}
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleDarkMode}
+                        className="flex items-center space-x-2"
+                      >
+                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
+                      </Button>
+                      {user ? (
+                        <Button
+                          variant="outline"
+                          onClick={handleLogout}
+                          className="flex items-center space-x-2"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Logout</span>
+                        </Button>
+                      ) : (
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={handleSignIn}
+                            className="flex items-center space-x-2"
+                          >
+                            <span>Sign In</span>
+                          </Button>
+                          <Button
+                            variant="default"
+                            onClick={handleSignUp}
+                            className="flex items-center space-x-2"
+                          >
+                            <span>Sign Up</span>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+              {navItems.length === 0 && (
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleDarkMode}
+                    className="flex items-center space-x-2"
+                  >
+                    {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
+                  </Button>
+                  {user ? (
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </Button>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleSignIn}
+                        className="flex items-center space-x-2"
+                      >
+                        <span>Sign In</span>
+                      </Button>
+                      <Button
+                        variant="default"
+                        onClick={handleSignUp}
+                        className="flex items-center space-x-2"
+                      >
+                        <span>Sign Up</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </MobileNavMenu>
         </MobileNav>
       </Navbar>
 
       {/* Main Content */}
-      <main className="pt-16">
+      <main>
         {children}
       </main>
     </div>

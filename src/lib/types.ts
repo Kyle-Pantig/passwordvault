@@ -1,9 +1,6 @@
 export interface AdvancedCredentialField {
   id: string
-  name: string
   value: string
-  isVisible: boolean
-  showValue?: boolean
   isMasked?: boolean
 }
 
@@ -33,6 +30,8 @@ export interface Credential {
   category?: Category
   created_at: string
   updated_at: string
+  is_shared?: boolean
+  shared_permission?: string
 }
 
 export interface CreateCredentialData {
@@ -55,6 +54,35 @@ export interface UpdateCredentialData {
   custom_fields?: AdvancedCredentialField[]
   notes?: string
   category_id?: string
+}
+
+export type FolderLockType = 'passcode_4' | 'passcode_6' | 'password'
+
+export interface FolderLock {
+  id: string
+  user_id: string
+  category_id: string
+  lock_type: FolderLockType
+  encrypted_lock_data: string
+  salt: string
+  created_at: string
+  updated_at: string
+  is_locked: boolean
+  last_unlock_attempt?: string
+  failed_attempts: number
+  max_attempts: number
+  lockout_until?: string
+}
+
+export interface CreateFolderLockData {
+  category_id: string
+  lock_type: FolderLockType
+  passcode: string
+}
+
+export interface UnlockFolderData {
+  category_id: string
+  passcode: string
 }
 
 export interface CreateCategoryData {

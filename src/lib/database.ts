@@ -1,16 +1,22 @@
 import { createClient } from '@/lib/supabase/client'
-import { encrypt, decrypt } from '@/lib/encryption'
+import { encrypt, safeDecrypt } from '@/lib/encryption'
 import { Credential, CreateCredentialData, UpdateCredentialData, AdvancedCredentialField, Category, CreateCategoryData, UpdateCategoryData } from '@/lib/types'
 
 export class DatabaseService {
   private supabase = createClient()
 
   private encryptCustomFields(fields: AdvancedCredentialField[]): AdvancedCredentialField[] {
-    return fields.map(field => ({
-      ...field,
-      name: encrypt(field.name),
-      value: encrypt(field.value)
-    }))
+    return fields.map(field => {
+      
+      const encryptedField = {
+        id: field.id,
+        value: field.value ? encrypt(field.value) : '',
+        isMasked: field.isMasked || false
+      }
+      
+      
+      return encryptedField
+    })
   }
 
   private decryptCustomFields(fields: any): AdvancedCredentialField[] {
@@ -23,19 +29,37 @@ export class DatabaseService {
     if (Array.isArray(fields)) {
       return fields.map(field => {
         try {
-          const decryptedName = decrypt(field.name)
-          const decryptedValue = decrypt(field.value)
+          // Check if the field has the required properties
+          if (!field || typeof field !== 'object') {
+            return {
+              id: field?.id || `field-${Date.now()}`,
+              value: '[Invalid Field]',
+              isMasked: false
+            }
+          }
+
+          // Only try to decrypt if the fields exist and are strings and look like encrypted data
+          const isEncrypted = (text: string) => text && typeof text === 'string' && text.startsWith('U2FsdGVkX1')
+          
+          // Only handle value field - no name field needed
+          let decryptedValue = ''
+          
+          if (field.value && isEncrypted(field.value)) {
+            decryptedValue = safeDecrypt(field.value, '[Decryption Error]')
+          } else {
+            decryptedValue = field.value || ''
+          }
+          
           return {
-            ...field,
-            name: decryptedName,
-            value: decryptedValue
+            id: field.id || `field-${Date.now()}`,
+            value: decryptedValue,
+            isMasked: field.isMasked || false
           }
         } catch (error) {
-          console.error('Custom field decryption error:', error)
           return {
-            ...field,
-            name: '[Decryption Error]',
-            value: '[Decryption Error]'
+            id: field?.id || `field-${Date.now()}`,
+            value: '[Decryption Error]',
+            isMasked: field?.isMasked || false
           }
         }
       })
@@ -56,7 +80,6 @@ export class DatabaseService {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Database error:', error)
         throw new Error(`Failed to fetch credentials: ${error.message}`)
       }
 
@@ -72,21 +95,11 @@ export class DatabaseService {
         
         // Only decrypt if the fields exist
         if (cred.password) {
-          try {
-            decryptedPassword = decrypt(cred.password)
-          } catch (passwordError) {
-            console.error('Password decryption error for credential:', cred.id, passwordError)
-            decryptedPassword = '[Decryption Error - Please re-enter password]'
-          }
+          decryptedPassword = safeDecrypt(cred.password, '[Decryption Error - Please re-enter password]')
         }
         
         if (cred.username) {
-          try {
-            decryptedUsername = decrypt(cred.username)
-          } catch (usernameError) {
-            console.error('Username decryption error for credential:', cred.id, usernameError)
-            decryptedUsername = '[Decryption Error - Please re-enter username]'
-          }
+          decryptedUsername = safeDecrypt(cred.username, '[Decryption Error - Please re-enter username]')
         }
         
         try {
@@ -94,8 +107,6 @@ export class DatabaseService {
             decryptedCustomFields = this.decryptCustomFields(cred.custom_fields)
           }
         } catch (customFieldsError) {
-          console.error('Custom fields decryption error for credential:', cred.id, customFieldsError)
-          console.error('Custom fields data:', cred.custom_fields)
           decryptedCustomFields = []
         }
         
@@ -110,7 +121,6 @@ export class DatabaseService {
         }
       })
     } catch (error) {
-      console.error('Error in getCredentials:', error)
       throw error
     }
   }
@@ -190,8 +200,8 @@ export class DatabaseService {
     return {
       ...data,
       credential_type: credentialData.credential_type || data.credential_type || 'basic',
-      password: credentialData.password || (data.password ? decrypt(data.password) : undefined),
-      username: credentialData.username || (data.username ? decrypt(data.username) : undefined),
+      password: credentialData.password || (data.password ? safeDecrypt(data.password, '[Decryption Error]') : undefined),
+      username: credentialData.username || (data.username ? safeDecrypt(data.username, '[Decryption Error]') : undefined),
       custom_fields: credentialData.custom_fields || (data.custom_fields ? this.decryptCustomFields(data.custom_fields) : []),
       notes: credentialData.notes !== undefined ? credentialData.notes : (data.notes || '')
     }
@@ -217,13 +227,11 @@ export class DatabaseService {
         .order('name', { ascending: true })
 
       if (error) {
-        console.error('Database error:', error)
         throw new Error(`Failed to fetch categories: ${error.message}`)
       }
 
       return data || []
     } catch (error) {
-      console.error('Error in getCategories:', error)
       throw error
     }
   }

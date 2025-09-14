@@ -77,7 +77,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Usage
 
 1. **Sign Up**: Create a new account with your email and password
-2. **Sign In**: Log in to access your password vault
+2. **Sign In**: Log in to access your digivault
 3. **Add Credentials**: Click "Add Credential" to store new service credentials
 4. **Manage Credentials**: Edit or delete existing credentials using the dropdown menu
 5. **Search**: Use the search bar to quickly find specific credentials

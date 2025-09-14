@@ -31,7 +31,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      router.replace('/')
+      router.replace('/vault')
     }
   }, [user, authLoading, router])
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
         router.push('/verify-2fa')
       } else {
         toast.success('Logged in successfully!')
-        router.push('/')
+        router.push('/vault')
       }
     } catch (_error) {
       toast.error('An unexpected error occurred')
@@ -182,7 +182,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="flex flex-col items-center relative">
           <LoaderThree />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your vault...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     )
@@ -204,7 +204,7 @@ export default function LoginPage() {
           </Link>
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Sign in to your account to access your password vault
+            Sign in to your account to access your digivault
           </CardDescription>
         </CardHeader>
         <CardContent>

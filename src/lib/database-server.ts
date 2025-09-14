@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { encrypt, decrypt } from '@/lib/encryption'
+import { encrypt, safeDecrypt } from '@/lib/encryption'
 import { Credential, CreateCredentialData, UpdateCredentialData, AdvancedCredentialField, Category, CreateCategoryData, UpdateCategoryData } from '@/lib/types'
 
 export class DatabaseServiceServer {
@@ -9,9 +9,9 @@ export class DatabaseServiceServer {
 
   private encryptCustomFields(fields: AdvancedCredentialField[]): AdvancedCredentialField[] {
     return fields.map(field => ({
-      ...field,
-      name: encrypt(field.name),
-      value: encrypt(field.value)
+      id: field.id,
+      value: field.value ? encrypt(field.value) : '',
+      isMasked: field.isMasked || false
     }))
   }
 
@@ -25,19 +25,37 @@ export class DatabaseServiceServer {
     if (Array.isArray(fields)) {
       return fields.map(field => {
         try {
-          const decryptedName = decrypt(field.name)
-          const decryptedValue = decrypt(field.value)
+          // Check if the field has the required properties
+          if (!field || typeof field !== 'object') {
+            return {
+              id: field?.id || `field-${Date.now()}`,
+              value: '[Invalid Field]',
+              isMasked: false
+            }
+          }
+
+          // Only try to decrypt if the fields exist and are strings and look like encrypted data
+          const isEncrypted = (text: string) => text && typeof text === 'string' && text.startsWith('U2FsdGVkX1')
+          
+          // Only handle value field - no name field needed
+          let decryptedValue = ''
+          
+          if (field.value && isEncrypted(field.value)) {
+            decryptedValue = safeDecrypt(field.value, '[Decryption Error]')
+          } else {
+            decryptedValue = field.value || ''
+          }
+          
           return {
-            ...field,
-            name: decryptedName,
-            value: decryptedValue
+            id: field.id || `field-${Date.now()}`,
+            value: decryptedValue,
+            isMasked: field.isMasked || false
           }
         } catch (error) {
-          console.error('Custom field decryption error:', error)
           return {
-            ...field,
-            name: '[Decryption Error]',
-            value: '[Decryption Error]'
+            id: field?.id || `field-${Date.now()}`,
+            value: '[Decryption Error]',
+            isMasked: field?.isMasked || false
           }
         }
       })
@@ -59,7 +77,6 @@ export class DatabaseServiceServer {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Database error:', error)
         throw new Error(`Failed to fetch credentials: ${error.message}`)
       }
 
@@ -75,21 +92,11 @@ export class DatabaseServiceServer {
         
         // Only decrypt if the fields exist
         if (cred.password) {
-          try {
-            decryptedPassword = decrypt(cred.password)
-          } catch (passwordError) {
-            console.error('Password decryption error for credential:', cred.id, passwordError)
-            decryptedPassword = '[Decryption Error - Please re-enter password]'
-          }
+          decryptedPassword = safeDecrypt(cred.password, '[Decryption Error - Please re-enter password]')
         }
         
         if (cred.username) {
-          try {
-            decryptedUsername = decrypt(cred.username)
-          } catch (usernameError) {
-            console.error('Username decryption error for credential:', cred.id, usernameError)
-            decryptedUsername = '[Decryption Error - Please re-enter username]'
-          }
+          decryptedUsername = safeDecrypt(cred.username, '[Decryption Error - Please re-enter username]')
         }
         
         try {
@@ -97,8 +104,6 @@ export class DatabaseServiceServer {
             decryptedCustomFields = this.decryptCustomFields(cred.custom_fields)
           }
         } catch (customFieldsError) {
-          console.error('Custom fields decryption error for credential:', cred.id, customFieldsError)
-          console.error('Custom fields data:', cred.custom_fields)
           decryptedCustomFields = []
         }
         
@@ -113,7 +118,6 @@ export class DatabaseServiceServer {
         }
       })
     } catch (error) {
-      console.error('Error in getCredentials:', error)
       throw error
     }
   }
@@ -156,6 +160,35 @@ export class DatabaseServiceServer {
       throw new Error(`Failed to create credential: ${error.message}`)
     }
 
+    // If credential is added to a shared folder, share it with all users who have access to that folder
+    if (credentialData.category_id) {
+      try {
+        // Get all users who have access to this folder
+        const { data: sharedAccess, error: sharedError } = await supabase
+          .from('shared_folder_access')
+          .select('shared_with_user_id, permission_level')
+          .eq('folder_id', credentialData.category_id)
+          .eq('owner_id', user.id)
+
+        if (!sharedError && sharedAccess && sharedAccess.length > 0) {
+          // Create shared_credentials records for all users who have access to this folder
+          const sharedCredsData = sharedAccess.map((access: any) => ({
+            credential_id: data.id,
+            folder_id: credentialData.category_id,
+            owner_id: user.id,
+            shared_with_user_id: access.shared_with_user_id,
+            permission_level: access.permission_level
+          }))
+
+          await supabase
+            .from('shared_credentials')
+            .insert(sharedCredsData)
+        }
+      } catch (shareError) {
+        // Don't fail credential creation if sharing fails
+      }
+    }
+
     return {
       ...data,
       credential_type: credentialData.credential_type,
@@ -195,8 +228,8 @@ export class DatabaseServiceServer {
     return {
       ...data,
       credential_type: credentialData.credential_type || data.credential_type || 'basic',
-      password: credentialData.password || (data.password ? decrypt(data.password) : undefined),
-      username: credentialData.username || (data.username ? decrypt(data.username) : undefined),
+      password: credentialData.password || (data.password ? safeDecrypt(data.password, '[Decryption Error]') : undefined),
+      username: credentialData.username || (data.username ? safeDecrypt(data.username, '[Decryption Error]') : undefined),
       custom_fields: credentialData.custom_fields || (data.custom_fields ? this.decryptCustomFields(data.custom_fields) : []),
       notes: credentialData.notes !== undefined ? credentialData.notes : (data.notes || '')
     }
@@ -224,13 +257,11 @@ export class DatabaseServiceServer {
         .order('name', { ascending: true })
 
       if (error) {
-        console.error('Database error:', error)
         throw new Error(`Failed to fetch categories: ${error.message}`)
       }
 
       return data || []
     } catch (error) {
-      console.error('Error in getCategories:', error)
       throw error
     }
   }
@@ -243,9 +274,25 @@ export class DatabaseServiceServer {
       throw new Error('User not authenticated')
     }
 
+    // Check if category with same name already exists for this user
+    const { data: existingCategory, error: checkError } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .eq('name', categoryData.name.trim())
+      .single()
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found" error
+      throw new Error(`Failed to check for existing category: ${checkError.message}`)
+    }
+
+    if (existingCategory) {
+      throw new Error('A folder with this name already exists. Please choose a different name.')
+    }
+
     const insertData = {
       user_id: user.id,
-      name: categoryData.name,
+      name: categoryData.name.trim(),
       color: categoryData.color || '#3B82F6',
       icon: categoryData.icon || 'folder'
     }
@@ -257,6 +304,10 @@ export class DatabaseServiceServer {
       .single()
 
     if (error) {
+      // Check for unique constraint violation
+      if (error.code === '23505') {
+        throw new Error('A folder with this name already exists. Please choose a different name.')
+      }
       throw new Error(`Failed to create category: ${error.message}`)
     }
 
@@ -348,7 +399,6 @@ export class DatabaseServiceServer {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Database error:', error)
         throw new Error(`Failed to fetch credentials: ${error.message}`)
       }
 
@@ -367,7 +417,6 @@ export class DatabaseServiceServer {
         category: undefined
       }))
     } catch (error) {
-      console.error('Error in getCredentialsInCategory:', error)
       throw error
     }
   }

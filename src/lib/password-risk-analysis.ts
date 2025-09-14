@@ -9,6 +9,8 @@ export interface PasswordRiskAnalysis {
     username: string;
     strength: 'very-weak' | 'weak' | 'medium' | 'strong' | 'very-strong';
     issues: string[];
+    isAdvanced?: boolean;
+    fieldName?: string;
   }>;
   reusedPasswords: Array<{
     password: string;
@@ -17,18 +19,32 @@ export interface PasswordRiskAnalysis {
       id: string;
       service_name: string;
       username: string;
+      isAdvanced?: boolean;
+      fieldName?: string;
     }>;
   }>;
 }
 
+export interface AdvancedCredentialField {
+  id: string
+  name?: string
+  value: string
+  isMasked?: boolean
+}
+
 export interface Credential {
   id: string;
+  user_id: string;
   service_name: string;
+  service_url?: string;
+  credential_type: 'basic' | 'advanced';
   username?: string;
   password?: string;
-  credential_type?: string;
-  created_at?: string;
-  updated_at?: string;
+  custom_fields: AdvancedCredentialField[];
+  notes?: string;
+  category_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Common weak passwords list
@@ -136,13 +152,13 @@ export function calculatePasswordStrength(password: string): {
 // Analyze password risk across all credentials
 export function analyzePasswordRisk(credentials: Credential[]): PasswordRiskAnalysis {
   const weakPasswords: PasswordRiskAnalysis['weakPasswords'] = [];
-  const passwordCounts = new Map<string, Array<{ id: string; service_name: string; username: string }>>();
+  const passwordCounts = new Map<string, Array<{ id: string; service_name: string; username: string; isAdvanced?: boolean; fieldName?: string }>>();
   
   let weakCount = 0;
 
   // Analyze each credential
   credentials.forEach(credential => {
-    // Only analyze basic credentials with passwords
+    // Analyze basic credentials with passwords
     if (credential.credential_type === 'basic' && credential.password && credential.username) {
       const analysis = calculatePasswordStrength(credential.password);
       
@@ -165,7 +181,44 @@ export function analyzePasswordRisk(credentials: Credential[]): PasswordRiskAnal
       passwordCounts.get(credential.password)!.push({
         id: credential.id,
         service_name: credential.service_name,
-        username: credential.username
+        username: credential.username,
+        isAdvanced: false
+      });
+    }
+    
+    // Analyze advanced credentials with masked fields
+    if (credential.credential_type === 'advanced' && credential.custom_fields) {
+      credential.custom_fields.forEach(field => {
+        // Only analyze fields that are masked (likely passwords)
+        if (field.isMasked && field.value) {
+          const analysis = calculatePasswordStrength(field.value);
+          
+          // Check for weak passwords
+          if (analysis.strength === 'very-weak' || analysis.strength === 'weak') {
+            weakCount++;
+            weakPasswords.push({
+              id: `${credential.id}-${field.id}`,
+              service_name: credential.service_name,
+              username: credential.service_name, // Use service name for display
+              strength: analysis.strength,
+              issues: analysis.issues,
+              isAdvanced: true,
+              fieldName: field.name || 'Field' || 'Field' // Store the actual field name or default
+            });
+          }
+
+          // Track password reuse
+          if (!passwordCounts.has(field.value)) {
+            passwordCounts.set(field.value, []);
+          }
+          passwordCounts.get(field.value)!.push({
+            id: `${credential.id}-${field.id}`,
+            service_name: credential.service_name,
+            username: credential.service_name,
+            isAdvanced: true,
+            fieldName: field.name || 'Field'
+          });
+        }
       });
     }
   });

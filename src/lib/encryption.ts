@@ -1,6 +1,6 @@
 import CryptoJS from 'crypto-js'
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production'
+const ENCRYPTION_KEY = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || 'default-key-change-in-production'
 
 export function encrypt(text: string): string {
   return CryptoJS.AES.encrypt(text, ENCRYPTION_KEY).toString()
@@ -23,5 +23,15 @@ export function decrypt(encryptedText: string): string {
     console.error('Encrypted text (first 50 chars):', encryptedText.substring(0, 50))
     console.error('Encryption key length:', ENCRYPTION_KEY.length)
     throw error
+  }
+}
+
+// Safe decrypt function that returns a fallback value instead of throwing
+export function safeDecrypt(encryptedText: string, fallback: string = '[Decryption Error]'): string {
+  try {
+    return decrypt(encryptedText)
+  } catch (error) {
+    console.warn('Safe decrypt failed, using fallback:', fallback)
+    return fallback
   }
 }

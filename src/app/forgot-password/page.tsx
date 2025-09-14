@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      router.replace('/')
+      router.replace('/vault')
     }
   }, [user, authLoading, router])
 
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="flex flex-col items-center relative">
           <LoaderThree />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your vault...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     )

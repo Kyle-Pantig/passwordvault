@@ -1,7 +1,7 @@
 # Session Configuration - 1 Hour Timeout
 
 ## Overview
-This document explains how to configure your password vault to have 1-hour session timeouts.
+This document explains how to configure your digivault to have 1-hour session timeouts.
 
 ## Supabase Configuration Required
 

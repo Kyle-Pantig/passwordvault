@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
+import { useSubscription } from '@/contexts/subscription-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,9 +14,141 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { toast } from 'sonner'
-import { useDarkMode } from '@/contexts/dark-mode-context'
-import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X, Copy, AlertTriangle, Info } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { Eye, EyeOff, Save, User, Shield, Bell, Trash2, ExternalLink, Check, X, Copy, AlertTriangle, Info, Crown, Zap, Star, ArrowRight } from 'lucide-react'
 import { LoaderThree } from '@/components/ui/loader'
+
+// Subscription Section Component
+function SubscriptionSection() {
+  const { subscription, loading, getRemainingCredits } = useSubscription()
+  const [remainingCredits, setRemainingCredits] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchRemainingCredits = async () => {
+      if (subscription) {
+        const credits = await getRemainingCredits()
+        setRemainingCredits(credits)
+      }
+    }
+    fetchRemainingCredits()
+  }, [subscription, getRemainingCredits])
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-4"><LoaderThree /></div>
+  }
+
+  if (!subscription) {
+    return <div className="text-gray-500">No subscription found</div>
+  }
+
+  const getPlanIcon = (plan: string) => {
+    switch (plan) {
+      case 'FREE': return <Star className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+      case 'PLUS': return <Zap className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+      case 'PRO': return <Crown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+      default: return <Shield className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+    }
+  }
+
+  const getPlanColor = (plan: string) => {
+    return 'text-gray-900 dark:text-white'
+  }
+
+  const getPlanBadgeColor = (plan: string) => {
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Current Plan */}
+      <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg ">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            {getPlanIcon(subscription.plan)}
+            <div>
+              <h3 className={`text-xl font-semibold ${getPlanColor(subscription.plan)}`}>
+                DigiVault {subscription.plan}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {subscription.credentialLimit === -1 
+                  ? 'Unlimited credentials' 
+                  : `${subscription.credentialLimit} credentials`
+                }
+              </p>
+            </div>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${getPlanBadgeColor(subscription.plan)}`}>
+            {subscription.status}
+          </div>
+        </div>
+
+        {/* Billing Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          {subscription.currentPeriodStart && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Period Start</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {new Date(subscription.currentPeriodStart).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+          )}
+          
+          {subscription.currentPeriodEnd && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {subscription.plan === 'FREE' ? 'Plan Started' : 'Next Billing'}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {subscription.plan === 'FREE' ? (
+                  'Free plan - no billing'
+                ) : (
+                  new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Usage Stats */}
+      {subscription.credentialLimit !== -1 && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Used</p>
+            <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+              {subscription.credentialLimit - remainingCredits} / {subscription.credentialLimit}
+            </p>
+          </div>
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Remaining</p>
+            <p className="text-2xl font-semibold text-gray-900 dark:text-white">{remainingCredits}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Button */}
+      {subscription.plan !== 'PRO' && (
+        <div className="pt-2">
+          <Button 
+            className="w-full" 
+            onClick={() => window.location.href = '/pricing'}
+          >
+            {subscription.plan === 'FREE' ? 'Upgrade to Plus' : 'Upgrade to Pro'}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -57,7 +190,9 @@ export default function SettingsPage() {
   const [verifyingDisablePassword, setVerifyingDisablePassword] = useState(false)
   const [showDisablePassword, setShowDisablePassword] = useState(false)
   
-  const { darkMode, setDarkMode } = useDarkMode()
+  const { theme, setTheme } = useTheme()
+  const darkMode = theme === 'dark'
+  const setDarkMode = (isDark: boolean) => setTheme(isDark ? 'dark' : 'light')
   const { user, loading: authLoading, updatePassword, signOut } = useAuth()
   const router = useRouter()
 
@@ -588,7 +723,7 @@ export default function SettingsPage() {
 
       toast.success(data.message || 'Account deleted successfully')
       await signOut()
-      router.push('/login')
+      router.push('/')
     } catch (_error) {
       toast.error('Failed to delete account. Please try again or contact support.')
       console.error('Delete account error:', _error)
@@ -624,7 +759,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center relative">
           <LoaderThree />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading settings...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     )
@@ -658,6 +793,22 @@ export default function SettingsPage() {
                   Email cannot be changed
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Subscription Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5" />
+                <span>Subscription</span>
+              </CardTitle>
+              <CardDescription>
+                Manage your subscription plan and billing
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubscriptionSection />
             </CardContent>
           </Card>
 

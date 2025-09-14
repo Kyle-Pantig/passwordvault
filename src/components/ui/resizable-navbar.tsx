@@ -28,6 +28,8 @@ interface NavItemsProps {
   items: {
     name: string;
     link: string;
+    hasSecurityIssues?: boolean;
+    riskLevel?: 'low' | 'moderate' | 'high' | 'critical';
   }[];
   className?: string;
   onItemClick?: () => void;
@@ -60,7 +62,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
   const [visible, setVisible] = useState<boolean>(false);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 100) {
+    if (latest > 20) {
       setVisible(true);
     } else {
       setVisible(false);
@@ -71,7 +73,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <motion.div
       ref={ref}
       // IMPORTANT: Change this to class of `fixed` if you want the navbar to be fixed
-      className={cn("fixed inset-x-0 top-0 z-40 w-full", className)}
+      className={cn("fixed inset-x-0 top-2 z-40 w-full", className)}
     >
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
@@ -105,7 +107,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         minWidth: "800px",
       }}
       className={cn(
-        "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-white/90 dark:bg-neutral-950/90 px-4 py-2 lg:flex backdrop-blur-sm",
+        "relative z-[60] mx-auto dark:border dark:border-gray-500hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-white/90 dark:bg-neutral-950/90 px-4 py-2 lg:flex backdrop-blur-sm",
         visible && "bg-white/95 dark:bg-neutral-950/95",
         className,
       )}
@@ -140,7 +142,21 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
               className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
             />
           )}
-          <span className="relative z-20">{item.name}</span>
+          <span className="relative z-20 flex items-center">
+            {item.name}
+            {item.hasSecurityIssues && (
+              <div
+                className={cn(
+                  "ml-2 h-2 w-2 rounded-full border border-white dark:border-gray-900",
+                  item.riskLevel === 'low' && "bg-yellow-500",
+                  item.riskLevel === 'moderate' && "bg-orange-500",
+                  item.riskLevel === 'high' && "bg-red-500",
+                  item.riskLevel === 'critical' && "bg-red-600 animate-pulse"
+                )}
+                title={`Security issues detected: ${item.riskLevel} risk level`}
+              />
+            )}
+          </span>
         </Link>
       ))}
     </motion.div>
@@ -167,7 +183,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 50,
       }}
       className={cn(
-        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-white/90 dark:bg-neutral-950/90 px-0 py-2 lg:hidden backdrop-blur-sm",
+        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-white/90 dark:bg-neutral-950/90 py-2 lg:hidden backdrop-blur-sm",
         visible && "bg-white/95 dark:bg-neutral-950/95",
         className,
       )}
@@ -184,7 +200,7 @@ export const MobileNavHeader = ({
   return (
     <div
       className={cn(
-        "flex w-full flex-row items-center justify-between",
+        "flex w-full px-2 flex-row items-center justify-between",
         className,
       )}
     >

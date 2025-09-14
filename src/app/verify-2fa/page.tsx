@@ -39,9 +39,9 @@ function Verify2FAContent() {
       const { twoFactorEnabled } = await response.json()
       
       if (!twoFactorEnabled) {
-        // User doesn't have 2FA enabled, redirect to home
+        // User doesn't have 2FA enabled, redirect to vault
         toast.success('Signed in successfully!')
-        router.push('/')
+        router.push('/vault')
       } else {
         setChecking2FA(false)
       }
@@ -86,7 +86,7 @@ function Verify2FAContent() {
             toast.warning(data.warning)
           }
           
-          router.push('/')
+          router.push('/vault')
         } else {
           toast.error(data.error || 'Invalid backup code')
         }
@@ -107,7 +107,7 @@ function Verify2FAContent() {
           sessionStorage.setItem('2fa_verified', 'true')
           
           toast.success('Login successful!')
-          router.push('/')
+          router.push('/vault')
         } else {
           toast.error(data.error || 'Invalid verification code')
         }
@@ -161,7 +161,7 @@ function Verify2FAContent() {
               <div className="flex flex-col items-center space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Checking your security settings...
+                  Loading...
                 </p>
               </div>
             </CardContent>
@@ -293,7 +293,7 @@ function Verify2FAContent() {
               <button
                 onClick={() => {
                   supabase.auth.signOut()
-                  router.push('/login')
+                  router.push('/')
                 }}
                 className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
               >

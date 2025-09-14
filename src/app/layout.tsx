@@ -3,11 +3,15 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import NavbarLayout from "@/components/layout/navbar-layout";
-import { Footer } from "@/components/layout/footer";
-import { DarkModeProvider } from "@/contexts/dark-mode-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import { UnlockedFoldersProvider } from "@/contexts/unlocked-folders-context";
+import { SubscriptionProvider } from "@/contexts/subscription-context";
+import { SocketProvider } from "@/contexts/socket-context";
 import { LoadingWrapper } from "@/components/loading-wrapper";
 import { ReCaptchaProvider } from '@/components/providers/recaptcha-provider';
+import { QueryProvider } from '@/components/providers/query-provider';
+import { ThemeProvider } from "@/components/theme-provider";
+import { Analytics } from '@vercel/analytics/next';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,9 +26,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://digivault-sand.vercel.app"),
   keywords: [
+    "digivault",
+    "digivault password manager",
+    "digivault secure passwords",
+    "digivault secure vault",
+    "digivault encrypted passwords",
+    "digivault password security",
+    "digivault 2FA authentication",
+    "digivault-sand",
+    "digivault vercel",
     "password manager",
     "secure passwords",
-    "password vault",
+    "secure vault",
     "encrypted passwords",
     "password security",
     "2FA authentication",
@@ -44,15 +57,15 @@ export const metadata: Metadata = {
     "password encryption",
   ],
   title: {
-    default: "DigiVault | Secure Password Manager & Digital Vault",
-    template: `%s | DigiVault | Secure Password Manager & Digital Vault`,
+    default: "DigiVault",
+    template: `%s | DigiVault`,
   },
   description:
-    "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
+    "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords.",
   openGraph: {
-    title: "DigiVault | Secure Password Manager & Digital Vault",
+    title: "DigiVault",
     description:
-      "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
+      "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords.",
     url: "https://digivault-sand.vercel.app",
     siteName: "DigiVault",
     type: "website",
@@ -71,22 +84,8 @@ export const metadata: Metadata = {
     site: "@digivault",
     title: "DigiVault | Secure Password Manager & Digital Vault",
     description:
-      "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords with our intuitive and secure digital vault.",
+      "DigiVault is a secure password manager with encryption, 2FA protection, and advanced security features. Store, manage, and protect your passwords.",
     images: ["/og-image.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-  alternates: {
-    canonical: "https://digivault-sand.vercel.app",
   },
 };
 
@@ -105,7 +104,7 @@ export default function RootLayout({
         />
         <meta name="google-adsense-account" content="ca-pub-3057643117380889" />
         <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="canonical" href="https://digivault-sand.vercel.app" />
         <script
           dangerouslySetInnerHTML={{
@@ -130,19 +129,30 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ReCaptchaProvider>
-          <AuthProvider>
-            <DarkModeProvider>
-              <LoadingWrapper>
-                <div className="min-h-screen flex flex-col">
-                  <NavbarLayout>
-                    {children}
-                  </NavbarLayout>
-                </div>
-              </LoadingWrapper>
-            </DarkModeProvider>
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <SocketProvider>
+                  <UnlockedFoldersProvider>
+                    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+                      <LoadingWrapper>
+                        <div className="min-h-screen flex flex-col">
+                          <NavbarLayout>
+                            <div className="mt-16">
+                              {children}
+                            </div>
+                          </NavbarLayout>
+                        </div>
+                      </LoadingWrapper>
+                    </ThemeProvider>
+                  </UnlockedFoldersProvider>
+                </SocketProvider>
+              </SubscriptionProvider>
+            </AuthProvider>
+          </QueryProvider>
         </ReCaptchaProvider>
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
