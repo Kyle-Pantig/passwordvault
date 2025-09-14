@@ -43,3 +43,4 @@ stripe-cli.zip
 stripe.exe
 test-permissions.js
 socket-server.js
+socket-server/node_modules/

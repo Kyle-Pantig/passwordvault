@@ -1,9 +1,12 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-  typescript: true,
-});
+// Initialize Stripe only if the secret key is available
+export const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-08-27.basil',
+      typescript: true,
+    })
+  : null;
 
 // Stripe client for frontend
 export const getStripe = () => {

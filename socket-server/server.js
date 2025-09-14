@@ -1,5 +1,5 @@
-// Load environment variables
-require('dotenv').config()
+// Load environment variables from parent directory
+require('dotenv').config({ path: '../.env.local' })
 
 const { createServer } = require('http')
 const { Server } = require('socket.io')

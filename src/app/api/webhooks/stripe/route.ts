@@ -16,6 +16,15 @@ export async function POST(request: NextRequest) {
   // For local development, skip signature verification
   let event;
   
+  // Check if Stripe is properly initialized
+  if (!stripe) {
+    console.error('Stripe is not initialized - STRIPE_SECRET_KEY is not set');
+    return NextResponse.json(
+      { error: 'Stripe configuration error' },
+      { status: 500 }
+    );
+  }
+
   // Check if we have a webhook secret for production
   if (process.env.STRIPE_WEBHOOK_SECRET && signature) {
     try {

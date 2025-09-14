@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if Stripe secret key is available
-    if (!process.env.STRIPE_SECRET_KEY) {
-      console.error('STRIPE_SECRET_KEY is not set');
+    // Check if Stripe is properly initialized
+    if (!stripe) {
+      console.error('Stripe is not initialized - STRIPE_SECRET_KEY is not set');
       return NextResponse.json(
         { error: 'Stripe configuration error' },
         { status: 500 }
