@@ -58,7 +58,7 @@ export function InvitationsNotification() {
 
   const handleNewInvitation = (data: any) => {
     fetchInvitations()
-    toast.info(`New folder sharing invitation from ${data.ownerEmail}`)
+    toast.info(`New folder sharing invitation for "${data.folderName}" from ${data.ownerEmail}`)
   }
 
   const handleInvitationAccepted = (data: any) => {

@@ -18,6 +18,39 @@ const httpServer = createServer((req, res) => {
     return
   }
   
+  // API endpoint to emit events from the main app
+  if (req.method === 'POST' && req.url === '/api/emit') {
+    let body = ''
+    req.on('data', chunk => {
+      body += chunk.toString()
+    })
+    req.on('end', () => {
+      try {
+        const { event, userId, data } = JSON.parse(body)
+        
+        if (event && userId) {
+          // Emit event to specific user
+          const socketId = userSockets.get(userId)
+          if (socketId) {
+            io.to(socketId).emit(event, data)
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true, message: 'Event emitted' }))
+          } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: false, message: 'User not connected' }))
+          }
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: false, message: 'Missing event or userId' }))
+        }
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: false, message: 'Invalid JSON' }))
+      }
+    })
+    return
+  }
+  
   // 404 for other routes
   res.writeHead(404, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify({ error: 'Not found' }))
@@ -78,7 +111,6 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
   const userData = socket.userData
   
-  console.log(`User connected: ${userData.email} (${userData.userId})`)
   
   // Store user socket mapping
   userSockets.set(userData.userId, socket.id)
@@ -168,22 +200,18 @@ io.on('connection', (socket) => {
 
   // Handle disconnection
   socket.on('disconnect', (reason) => {
-    console.log(`User disconnected: ${userData.email} (${userData.userId}) - Reason: ${reason}`)
     userSockets.delete(userData.userId)
   })
   
   // Handle errors
   socket.on('error', (error) => {
-    console.error(`Socket error for user ${userData.email}:`, error)
+    // Silent error handling
   })
 })
 
 const PORT = process.env.PORT || 3001
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Production Socket server running on port ${PORT}`)
-  console.log(`🌐 CORS origin: ${process.env.NEXT_PUBLIC_APP_URL || 'https://passwordvault-production.up.railway.app'}`)
-  console.log(`🔗 Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing'}`)
-  console.log(`🔑 Service Role Key: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing'}`)
+  // Silent startup
 })
 
 // Export for use in other files

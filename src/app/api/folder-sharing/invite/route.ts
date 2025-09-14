@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sendInvitationEmail } from '@/lib/email-service'
+import { emitToUser } from '@/lib/socket-emitter'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Verify folder ownership
     const { data: folder, error: folderError } = await supabase
       .from('categories')
-      .select('id, name, user_id')
+      .select('id, name, user_id, color, icon')
       .eq('id', folderId)
       .eq('user_id', user.id)
       .single()
@@ -142,6 +143,32 @@ export async function POST(request: NextRequest) {
 
     if (!emailSent) {
       console.warn('Failed to send invitation email, but invitation was created')
+    }
+
+    // Emit real-time event to notify the invited user (if they're online)
+    try {
+      // Get the invited user's ID if they exist
+      const { data: invitedUser } = await serviceSupabase
+        .from('profiles')
+        .select('id')
+        .eq('email', invitedEmail)
+        .single()
+
+      if (invitedUser) {
+        // Emit invitation created event to the invited user
+        await emitToUser(invitedUser.id, 'invitation:created', {
+          invitationId: invitation.id,
+          folderId: folderId,
+          folderName: folder.name,
+          folderColor: folder.color || '#3b82f6',
+          folderIcon: folder.icon || 'folder',
+          ownerEmail: user.email,
+          permissionLevel: permissionLevel,
+          expiresAt: invitation.expires_at
+        })
+      }
+    } catch (error) {
+      console.warn('Failed to emit socket event for invitation creation:', error)
     }
 
     return NextResponse.json({

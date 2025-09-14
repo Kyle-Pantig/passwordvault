@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         expires_at,
         created_at,
         owner_id,
-        categories (
+        categories!inner (
           id,
           name,
           color,
@@ -45,17 +45,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch invitations' }, { status: 500 })
     }
 
-    const formattedInvitations = invitations?.map(invitation => ({
-      invitation_id: invitation.id,
-      folder_id: invitation.folder_id,
-      folder_name: invitation.categories?.[0]?.name || 'Unknown Folder',
-      folder_color: invitation.categories?.[0]?.color || '#3b82f6',
-      folder_icon: invitation.categories?.[0]?.icon || 'folder',
-      owner_id: invitation.owner_id,
-      permission_level: invitation.permission_level,
-      expires_at: invitation.expires_at,
-      created_at: invitation.created_at
-    })) || []
+    // Get owner emails for all invitations
+    const ownerIds = [...new Set(invitations?.map(inv => inv.owner_id) || [])]
+    const ownerEmails = new Map<string, string>()
+    
+    if (ownerIds.length > 0) {
+      try {
+        // Get owner emails from auth.users table
+        const { data: ownerUsers, error: ownerError } = await serviceSupabase.auth.admin.listUsers()
+        if (!ownerError && ownerUsers?.users) {
+          ownerUsers.users.forEach((owner: any) => {
+            if (ownerIds.includes(owner.id)) {
+              ownerEmails.set(owner.id, owner.email || `User ${owner.id.slice(0, 8)}`)
+            }
+          })
+        }
+      } catch (error) {
+        console.warn('Could not fetch owner emails:', error)
+      }
+    }
+
+    const formattedInvitations = invitations?.map(invitation => {
+      // Handle categories as either array or single object
+      const category = Array.isArray(invitation.categories) 
+        ? invitation.categories[0] 
+        : invitation.categories
+
+      return {
+        invitation_id: invitation.id,
+        folder_id: invitation.folder_id,
+        folder_name: category?.name || 'Unknown Folder',
+        folder_color: category?.color || '#3b82f6',
+        folder_icon: category?.icon || 'folder',
+        owner_id: invitation.owner_id,
+        owner_email: ownerEmails.get(invitation.owner_id) || `User ${invitation.owner_id.slice(0, 8)}`,
+        permission_level: invitation.permission_level,
+        expires_at: invitation.expires_at,
+        created_at: invitation.created_at
+      }
+    }) || []
 
     return NextResponse.json({
       success: true,

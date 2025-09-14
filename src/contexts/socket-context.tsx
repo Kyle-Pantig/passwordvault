@@ -47,7 +47,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           ? 'https://passwordvault-production.up.railway.app:3001'
           : 'http://localhost:3001')
       
-      console.log('Attempting to connect to socket server:', socketUrl)
       
       const newSocket = io(socketUrl, {
         auth: {
@@ -63,25 +62,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       })
 
       newSocket.on('connect', () => {
-        console.log('Socket connected successfully')
         setIsConnected(true)
         setConnectionAttempts(0) // Reset attempts on successful connection
       })
 
       newSocket.on('disconnect', (reason: any) => {
-        console.log('Socket disconnected:', reason)
         setIsConnected(false)
       })
 
       newSocket.on('connect_error', (error: any) => {
-        console.error('Socket connection error:', error)
-        console.error('Socket URL:', socketUrl)
-        console.error('Error details:', {
-          message: error.message,
-          description: error.description,
-          context: error.context,
-          type: error.type
-        })
         setIsConnected(false)
         setConnectionAttempts(prev => prev + 1)
         
@@ -92,20 +81,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       })
 
       newSocket.on('reconnect', (attemptNumber: any) => {
-        console.log('Socket reconnected after', attemptNumber, 'attempts')
         setIsConnected(true)
       })
 
       newSocket.on('reconnect_attempt', (attemptNumber: any) => {
-        console.log('Socket reconnection attempt:', attemptNumber)
+        // Silent reconnection attempts
       })
 
       newSocket.on('reconnect_error', (error: any) => {
-        console.error('Socket reconnection error:', error)
+        // Silent reconnection errors
       })
 
       newSocket.on('reconnect_failed', () => {
-        console.error('Socket reconnection failed after all attempts')
         setIsConnected(false)
       })
 
