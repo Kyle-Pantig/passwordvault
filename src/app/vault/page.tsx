@@ -244,12 +244,6 @@ const VaultPage = () => {
       const credentialsData = vaultData.credentials || []
       const categoriesData = vaultData.categories || []
       
-      console.log('🔍 Debug - Vault Data:', {
-        sharedFolders: sharedFoldersData,
-        categories: categoriesData,
-        credentials: credentialsData.length
-      })
-      
       // Add shared folders to categories list for display
       const sharedCategories = sharedFoldersData.map((folder: any) => ({
         id: `shared-${folder.folder_id}`,
@@ -266,52 +260,11 @@ const VaultPage = () => {
         owner_email: folder.owner_email
       }))
       
-      console.log('🔍 Debug - Shared Categories:', sharedCategories)
-      
       // Combine regular categories with shared folders
       const allCategories = [...categoriesData, ...sharedCategories]
       
-      console.log('🔍 Debug - All Categories:', allCategories)
-      
       // Update the categories state to include shared folders
       setCategories(allCategories)
-      
-      // Extract shared credentials from shared folders and add them to the main credentials list
-      const sharedCredentials = sharedFoldersData.flatMap((folder: any) => 
-        folder.credentials?.map((cred: any) => {
-          const sharedCred = {
-            ...cred,
-            category_id: `shared-${folder.folder_id}`, // Use the shared folder ID
-            is_shared: true,
-            shared_permission: folder.permission_level // Use the folder's permission level
-          }
-          return sharedCred
-        }) || []
-      )
-      
-      // Combine regular credentials with shared credentials, avoiding duplicates
-      const allCredentials = [...credentialsData]
-      
-      // Add shared credentials that aren't already in the user's own credentials
-      sharedCredentials.forEach((sharedCred: any) => {
-        const existingIndex = allCredentials.findIndex(cred => cred.id === sharedCred.id)
-        if (existingIndex === -1) {
-          // Credential doesn't exist, add it
-          const credentialWithSharedProps: Credential = {
-            ...sharedCred,
-            is_shared: sharedCred.is_shared,
-            shared_permission: sharedCred.shared_permission
-          }
-          allCredentials.push(credentialWithSharedProps)
-        } else {
-          // Credential exists, update it with shared properties
-          allCredentials[existingIndex] = {
-            ...allCredentials[existingIndex],
-            is_shared: sharedCred.is_shared,
-            shared_permission: sharedCred.shared_permission
-          }
-        }
-      })
       
       // Analyze password risk
       const analysis = analyzePasswordRisk(credentialsData)

@@ -90,14 +90,44 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching folder locks:', folderLocksResult.error)
     }
 
+    // Combine regular credentials with shared credentials
+    const regularCredentials = decryptCredentials(credentialsResult.data || [])
+    const sharedFolders = sharedFoldersResult.data || []
+    
+    // Extract shared credentials and add them to the main credentials list
+    const sharedCredentials = sharedFolders.flatMap((folder: any) => 
+      folder.credentials?.map((cred: any) => ({
+        ...cred,
+        category_id: `shared-${folder.folder_id}`,
+        is_shared: true,
+        shared_permission: folder.shared_permission
+      })) || []
+    )
+    
+    // Combine all credentials, avoiding duplicates
+    const allCredentials = [...regularCredentials]
+    sharedCredentials.forEach((sharedCred: any) => {
+      const existingIndex = allCredentials.findIndex(cred => cred.id === sharedCred.id)
+      if (existingIndex === -1) {
+        allCredentials.push(sharedCred)
+      } else {
+        // Update existing credential with shared properties
+        allCredentials[existingIndex] = {
+          ...allCredentials[existingIndex],
+          is_shared: sharedCred.is_shared,
+          shared_permission: sharedCred.shared_permission
+        }
+      }
+    })
+
     return NextResponse.json({
       success: true,
       data: {
-        credentials: decryptCredentials(credentialsResult.data || []),
+        credentials: allCredentials,
         categories: categoriesResult.data || [],
         subscription: subscriptionResult.data,
         folderLocks: folderLocksResult.data || [],
-        sharedFolders: sharedFoldersResult.data || [],
+        sharedFolders: sharedFolders,
         invitations: invitationsResult.data || [],
         twoFactorEnabled: twoFactorResult.data?.two_factor_enabled || false
       }
@@ -256,13 +286,20 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
       return { data: [], error: foldersError }
     }
 
-    // Get shared credentials for each folder
+    // Get shared credentials for each folder - try a simpler approach
     const { data: sharedCreds, error: credsError } = await serviceSupabase
       .from('shared_credentials')
-      .select(`
-        credential_id,
-        folder_id,
-        credentials:credential_id(
+      .select('credential_id, folder_id')
+      .eq('shared_with_user_id', userId)
+      .in('folder_id', folderIds)
+
+    // Get the actual credentials data separately
+    let credentialsData: any[] = []
+    if (sharedCreds && sharedCreds.length > 0) {
+      const credentialIds = sharedCreds.map((sc: any) => sc.credential_id)
+      const { data: creds, error: credsDataError } = await serviceSupabase
+        .from('credentials')
+        .select(`
           id,
           service_name,
           service_url,
@@ -273,10 +310,13 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
           notes,
           created_at,
           updated_at
-        )
-      `)
-      .eq('shared_with_user_id', userId)
-      .in('folder_id', folderIds)
+        `)
+        .in('id', credentialIds)
+
+      if (!credsDataError && creds) {
+        credentialsData = creds
+      }
+    }
 
     if (credsError) {
       console.error('Error fetching shared credentials:', credsError)
@@ -285,13 +325,14 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
 
     // Group credentials by folder
     const credentialsByFolder: { [key: string]: any[] } = {}
-    if (sharedCreds) {
+    if (sharedCreds && credentialsData.length > 0) {
       sharedCreds.forEach((sharedCred: any) => {
-        if (sharedCred.credentials) {
+        const credential = credentialsData.find((cred: any) => cred.id === sharedCred.credential_id)
+        if (credential) {
           if (!credentialsByFolder[sharedCred.folder_id]) {
             credentialsByFolder[sharedCred.folder_id] = []
           }
-          credentialsByFolder[sharedCred.folder_id].push(sharedCred.credentials)
+          credentialsByFolder[sharedCred.folder_id].push(credential)
         }
       })
     }
@@ -318,7 +359,6 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
       }
     })
 
-    console.log('🔍 Debug - Shared Folders Result:', result)
 
     return {
       data: result,
