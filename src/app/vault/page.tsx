@@ -1671,8 +1671,19 @@ const VaultPage = () => {
       const matchesCategory = selectedCategory === 'all' || 
         (selectedCategory === 'uncategorized' && !cred.category_id) ||
         cred.category_id === selectedCategory ||
-        (selectedCategory.startsWith('shared-') && cred.category_id === selectedCategory.replace('shared-', ''))
+        (selectedCategory.startsWith('shared-') && cred.category_id === selectedCategory)
       
+      // Debug logging for shared folder filtering
+      if (selectedCategory.startsWith('shared-')) {
+        console.log('🔍 Debug - Shared Folder Filtering:', {
+          selectedCategory,
+          credId: cred.id,
+          credCategoryId: cred.category_id,
+          credServiceName: cred.service_name,
+          isShared: cred.is_shared,
+          matchesCategory
+        })
+      }
       
       const matchesService = selectedService === 'all' || 
         cred.service_name === selectedService
