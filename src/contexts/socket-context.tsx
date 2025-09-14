@@ -44,7 +44,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       // Use the same domain as the main app for Railway deployment
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
         (process.env.NODE_ENV === 'production' 
-          ? 'https://passwordvault-production.up.railway.app:3001'
+          ? window.location.origin
           : 'http://localhost:3001')
       
       

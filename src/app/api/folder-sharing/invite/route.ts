@@ -147,12 +147,9 @@ export async function POST(request: NextRequest) {
 
     // Emit real-time event to notify the invited user (if they're online)
     try {
-      // Get the invited user's ID if they exist
-      const { data: invitedUser } = await serviceSupabase
-        .from('profiles')
-        .select('id')
-        .eq('email', invitedEmail)
-        .single()
+      // Get the invited user's ID from auth.users table
+      const { data: invitedUsers } = await serviceSupabase.auth.admin.listUsers()
+      const invitedUser = invitedUsers?.users?.find(u => u.email === invitedEmail)
 
       if (invitedUser) {
         // Emit invitation created event to the invited user

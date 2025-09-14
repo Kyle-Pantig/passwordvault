@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { emitToUser } from '@/lib/socket-emitter'
 
 export async function GET(request: NextRequest) {
   try {
@@ -221,6 +222,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Emit socket event to notify the folder owner
+      try {
+        await emitToUser(invitation.owner_id, 'invitation:accepted', {
+          invitationId,
+          folderId: invitation.folder_id,
+          userId: user.id,
+          userEmail: user.email
+        })
+      } catch (error) {
+        console.warn('Failed to emit socket event for invitation acceptance:', error)
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Invitation accepted successfully'
@@ -239,6 +252,18 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error('Error updating invitation:', updateError)
         return NextResponse.json({ error: 'Failed to decline invitation' }, { status: 500 })
+      }
+
+      // Emit socket event to notify the folder owner
+      try {
+        await emitToUser(invitation.owner_id, 'invitation:declined', {
+          invitationId,
+          folderId: invitation.folder_id,
+          userId: user.id,
+          userEmail: user.email
+        })
+      } catch (error) {
+        console.warn('Failed to emit socket event for invitation decline:', error)
       }
 
       return NextResponse.json({

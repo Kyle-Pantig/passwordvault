@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useSocket } from '@/contexts/socket-context'
+import { useQueryClient } from '@tanstack/react-query'
 import { Mail, Users, CheckCircle, XCircle, Folder } from 'lucide-react'
 
 interface PendingInvitation {
@@ -27,7 +28,8 @@ export function InvitationsNotification() {
   const [showDialog, setShowDialog] = useState(false)
   const [processingInvitation, setProcessingInvitation] = useState<string | null>(null)
 
-  const { emit, on, off } = useSocket()
+  const { emit, on, off, isConnected } = useSocket()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     fetchInvitations()
@@ -42,7 +44,19 @@ export function InvitationsNotification() {
       off('invitation:accepted', handleInvitationAccepted)
       off('invitation:declined', handleInvitationDeclined)
     }
-  }, [])
+  }, []) // Remove isConnected dependency
+
+  // Separate effect for polling when socket is not connected
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      if (!isConnected) {
+        fetchInvitations()
+      }
+    }, 30000)
+
+    return () => clearInterval(pollInterval)
+  }, [isConnected])
+
 
   const fetchInvitations = async () => {
     try {
@@ -57,16 +71,35 @@ export function InvitationsNotification() {
   }
 
   const handleNewInvitation = (data: any) => {
-    fetchInvitations()
+    // Force immediate UI update
+    setInvitations(prev => {
+      const newInvitation = {
+        invitation_id: data.invitationId,
+        folder_id: data.folderId,
+        folder_name: data.folderName,
+        folder_color: data.folderColor,
+        folder_icon: data.folderIcon,
+        owner_email: data.ownerEmail,
+        permission_level: data.permissionLevel,
+        expires_at: data.expiresAt,
+        created_at: new Date().toISOString()
+      }
+      return [...prev, newInvitation]
+    })
     toast.info(`New folder sharing invitation for "${data.folderName}" from ${data.ownerEmail}`)
   }
 
   const handleInvitationAccepted = (data: any) => {
     fetchInvitations()
+    // Invalidate vault data to refresh shared folders
+    queryClient.invalidateQueries({ queryKey: ['vault-data'] })
+    // Don't show toast here as it's handled in the action handler
   }
 
   const handleInvitationDeclined = (data: any) => {
-    fetchInvitations()
+    // Remove the declined invitation immediately
+    setInvitations(prev => prev.filter(inv => inv.invitation_id !== data.invitationId))
+    // Don't show toast here as it's handled in the action handler
   }
 
   const handleInvitationAction = async (invitationId: string, action: 'accept' | 'decline') => {
@@ -89,10 +122,14 @@ export function InvitationsNotification() {
 
       if (data.success) {
         fetchInvitations()
+        // Invalidate vault data to refresh shared folders when accepting
+        if (action === 'accept') {
+          queryClient.invalidateQueries({ queryKey: ['vault-data'] })
+        }
         toast.success(`Invitation ${action}ed successfully`)
         
         // Emit socket event for real-time updates
-        emit('invitation:accept', { invitationId })
+        emit(`invitation:${action}`, { invitationId })
       } else {
         toast.error(data.error || `Failed to ${action} invitation`)
       }

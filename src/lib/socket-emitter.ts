@@ -2,7 +2,7 @@
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 
   (process.env.NODE_ENV === 'production' 
-    ? 'https://passwordvault-production.up.railway.app:3001'
+    ? 'https://passwordvault-production.up.railway.app'
     : 'http://localhost:3001')
 
 export async function emitToSocketServer(event: string, userId: string, data: any) {
@@ -28,7 +28,7 @@ export async function emitToSocketServer(event: string, userId: string, data: an
 
     return result.success
   } catch (error) {
-    console.warn('Error emitting socket event:', error)
+    console.error('Error emitting socket event:', error)
     return false
   }
 }

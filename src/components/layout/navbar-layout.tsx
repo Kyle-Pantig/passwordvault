@@ -260,85 +260,99 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
                     </a>
                   ))}
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={toggleDarkMode}
-                        className="flex items-center space-x-2"
-                      >
-                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                        <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
-                      </Button>
-                      {user ? (
-                        <Button
-                          variant="outline"
-                          onClick={handleLogout}
-                          className="flex items-center space-x-2"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          <span>Logout</span>
-                        </Button>
-                      ) : (
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            onClick={handleSignIn}
-                            className="flex items-center space-x-2"
-                          >
-                            <span>Sign In</span>
-                          </Button>
-                          <Button
-                            variant="default"
-                            onClick={handleSignUp}
-                            className="flex items-center space-x-2"
-                          >
-                            <span>Sign Up</span>
-                          </Button>
+                    <div className="flex flex-col space-y-3">
+                      {user && (
+                        <div className="flex justify-center">
+                          <InvitationsNotification />
                         </div>
                       )}
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleDarkMode}
+                          className="flex items-center space-x-2"
+                        >
+                          {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                          <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
+                        </Button>
+                        {user ? (
+                          <Button
+                            variant="outline"
+                            onClick={handleLogout}
+                            className="flex items-center space-x-2"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            <span>Logout</span>
+                          </Button>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              onClick={handleSignIn}
+                              className="flex items-center space-x-2"
+                            >
+                              <span>Sign In</span>
+                            </Button>
+                            <Button
+                              variant="default"
+                              onClick={handleSignUp}
+                              className="flex items-center space-x-2"
+                            >
+                              <span>Sign Up</span>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </>
               )}
               {navItems.length === 0 && (
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleDarkMode}
-                    className="flex items-center space-x-2"
-                  >
-                    {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
-                  </Button>
-                  {user ? (
-                    <Button
-                      variant="outline"
-                      onClick={handleLogout}
-                      className="flex items-center space-x-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </Button>
-                  ) : (
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleSignIn}
-                        className="flex items-center space-x-2"
-                      >
-                        <span>Sign In</span>
-                      </Button>
-                      <Button
-                        variant="default"
-                        onClick={handleSignUp}
-                        className="flex items-center space-x-2"
-                      >
-                        <span>Sign Up</span>
-                      </Button>
+                <div className="flex flex-col space-y-3">
+                  {user && (
+                    <div className="flex justify-center">
+                      <InvitationsNotification />
                     </div>
                   )}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleDarkMode}
+                      className="flex items-center space-x-2"
+                    >
+                      {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                      <span>{darkMode ? 'Light' : 'Dark'} Mode</span>
+                    </Button>
+                    {user ? (
+                      <Button
+                        variant="outline"
+                        onClick={handleLogout}
+                        className="flex items-center space-x-2"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Logout</span>
+                      </Button>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          onClick={handleSignIn}
+                          className="flex items-center space-x-2"
+                        >
+                          <span>Sign In</span>
+                        </Button>
+                        <Button
+                          variant="default"
+                          onClick={handleSignUp}
+                          className="flex items-center space-x-2"
+                        >
+                          <span>Sign Up</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
