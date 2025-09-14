@@ -5,7 +5,23 @@ const { createServer } = require('http')
 const { Server } = require('socket.io')
 const { createClient } = require('@supabase/supabase-js')
 
-const httpServer = createServer()
+const httpServer = createServer((req, res) => {
+  // Health check endpoint
+  if (req.url === '/health' || req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development'
+    }))
+    return
+  }
+  
+  // 404 for other routes
+  res.writeHead(404, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({ error: 'Not found' }))
+})
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
@@ -14,7 +30,12 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000, // 60 seconds
+  pingInterval: 25000, // 25 seconds
+  connectTimeout: 45000, // 45 seconds
+  upgradeTimeout: 10000, // 10 seconds
+  allowEIO3: true
 })
 
 // Check for required environment variables
@@ -67,11 +88,19 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
   const userData = socket.userData
   
+  console.log(`User connected: ${userData.email} (${userData.userId})`)
+  
   // Store user socket mapping
   userSockets.set(userData.userId, socket.id)
 
   // Join user to their personal room
   socket.join(`user:${userData.userId}`)
+  
+  // Send connection confirmation
+  socket.emit('connected', { 
+    message: 'Connected to socket server',
+    userId: userData.userId 
+  })
 
   // Handle invitation acceptance
   socket.on('invitation:accept', async (data) => {
@@ -148,13 +177,24 @@ io.on('connection', (socket) => {
   })
 
   // Handle disconnection
-  socket.on('disconnect', () => {
+  socket.on('disconnect', (reason) => {
+    console.log(`User disconnected: ${userData.email} (${userData.userId}) - Reason: ${reason}`)
     userSockets.delete(userData.userId)
+  })
+  
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error(`Socket error for user ${userData.email}:`, error)
   })
 })
 
 const PORT = process.env.PORT || 3001
 httpServer.listen(PORT, () => {
+  console.log(`🚀 Socket server running on port ${PORT}`)
+  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🌐 CORS origin: ${process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}`)
+  console.log(`🔗 Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing'}`)
+  console.log(`🔑 Service Role Key: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing'}`)
 })
 
 // Export for use in other files
