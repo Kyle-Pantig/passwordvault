@@ -55,10 +55,8 @@ export async function POST(request: NextRequest) {
             const safeDecrypted = safeDecrypt(cred.password, '')
             if (safeDecrypted && safeDecrypted !== '[Decryption Error - Please re-enter password]') {
               // It's already using current key, skip
-              console.log(`Password for credential ${cred.id} already using current key`)
             } else {
               // Can't decrypt, skip this field
-              console.log(`Cannot decrypt password for credential ${cred.id}, skipping`)
             }
           }
         }
@@ -72,9 +70,9 @@ export async function POST(request: NextRequest) {
           } catch (error) {
             const safeDecrypted = safeDecrypt(cred.username, '')
             if (safeDecrypted && safeDecrypted !== '[Decryption Error - Please re-enter username]') {
-              console.log(`Username for credential ${cred.id} already using current key`)
+              // Already using current key
             } else {
-              console.log(`Cannot decrypt username for credential ${cred.id}, skipping`)
+              // Can't decrypt, skip this field
             }
           }
         }
@@ -94,9 +92,9 @@ export async function POST(request: NextRequest) {
               } catch (error) {
                 const safeDecrypted = safeDecrypt(field.value, '')
                 if (safeDecrypted && safeDecrypted !== '[Decryption Error]') {
-                  console.log(`Custom field for credential ${cred.id} already using current key`)
+                  // Already using current key
                 } else {
-                  console.log(`Cannot decrypt custom field for credential ${cred.id}, skipping`)
+                  // Can't decrypt, skip this field
                 }
                 return field
               }
@@ -123,11 +121,9 @@ export async function POST(request: NextRequest) {
             errorDetails.push(`Failed to update credential ${cred.id}: ${updateError.message}`)
           } else {
             reencrypted++
-            console.log(`Successfully re-encrypted credential ${cred.id}`)
           }
         } else {
           skipped++
-          console.log(`Skipped credential ${cred.id} (already using current key or no encrypted fields)`)
         }
 
       } catch (error) {

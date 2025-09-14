@@ -6,7 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const { priceId, userId } = await request.json();
 
-    console.log('Checkout request:', { priceId, userId });
 
     if (!priceId || !userId) {
       return NextResponse.json(
@@ -46,7 +45,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('Checkout session created:', session.id);
     return NextResponse.json({ sessionId: session.id });
   } catch (error) {
     console.error('Error creating checkout session:', error);

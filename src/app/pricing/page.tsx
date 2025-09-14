@@ -87,7 +87,6 @@ export default function PricingPage() {
       return
     }
 
-    console.log('Upgrading to plan:', planName)
     setLoading(planName)
     
     try {

@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
       
       // If table doesn't exist (PGRST116) or no rows found (PGRST116), return FREE plan
       if (subscriptionError.code === 'PGRST116') {
-        console.log('No subscription found, returning FREE plan');
         return NextResponse.json({
           plan: 'FREE',
           status: 'active',

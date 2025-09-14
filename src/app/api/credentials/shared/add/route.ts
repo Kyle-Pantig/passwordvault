@@ -5,7 +5,6 @@ import { encrypt } from '@/lib/encryption'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Add shared credential API called')
     
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { credentialData, sharedFolderId } = body
     
-    console.log('Add shared credential request:', { credentialData, sharedFolderId })
 
     if (!credentialData || !sharedFolderId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })

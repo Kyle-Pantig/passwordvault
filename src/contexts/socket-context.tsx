@@ -49,17 +49,16 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       })
 
       newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id)
         setIsConnected(true)
       })
 
       newSocket.on('disconnect', () => {
-        console.log('Socket disconnected')
         setIsConnected(false)
       })
 
       newSocket.on('connect_error', (error: any) => {
         console.error('Socket connection error:', error)
+        console.error('Socket URL:', process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001')
         setIsConnected(false)
       })
 

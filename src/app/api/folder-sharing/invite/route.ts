@@ -36,8 +36,6 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    console.log('Subscription check:', { subscription, subError, userId: user.id })
-
     if (subError) {
       console.error('Error checking subscription:', subError)
       return NextResponse.json({ error: 'Failed to check subscription status' }, { status: 500 })
@@ -54,8 +52,6 @@ export async function POST(request: NextRequest) {
       .eq('id', folderId)
       .eq('user_id', user.id)
       .single()
-
-    console.log('Folder verification:', { folder, folderError, folderId, userId: user.id })
 
     if (folderError || !folder) {
       console.error('Folder verification failed:', folderError)
@@ -74,15 +70,12 @@ export async function POST(request: NextRequest) {
       .eq('folder_id', folderId)
       .in('status', ['pending', 'accepted'])
 
-    console.log('Existing invitations check:', { existingInvitations, countError, folderId })
-
     if (countError) {
       console.error('Error checking existing invitations:', countError)
       return NextResponse.json({ error: 'Failed to check existing invitations' }, { status: 500 })
     }
 
     if (existingInvitations && existingInvitations.length >= 5) {
-      console.log('Maximum invitations reached:', existingInvitations.length)
       return NextResponse.json({ error: 'Maximum of 5 users can be invited to a folder' }, { status: 400 })
     }
 
@@ -94,8 +87,6 @@ export async function POST(request: NextRequest) {
       .eq('invited_email', invitedEmail)
       .single()
 
-    console.log('Existing invitation check:', { existingInvitation, existingError, folderId, invitedEmail })
-
     if (existingError && existingError.code !== 'PGRST116') {
       console.error('Error checking existing invitation:', existingError)
       return NextResponse.json({ error: 'Failed to check existing invitation' }, { status: 500 })
@@ -103,10 +94,8 @@ export async function POST(request: NextRequest) {
 
     if (existingInvitation) {
       if (existingInvitation.status === 'pending') {
-        console.log('Invitation already pending for this email')
         return NextResponse.json({ error: 'Invitation already sent to this email' }, { status: 400 })
       } else if (existingInvitation.status === 'accepted') {
-        console.log('User already has access to this folder')
         return NextResponse.json({ error: 'User already has access to this folder' }, { status: 400 })
       }
     }
@@ -124,15 +113,11 @@ export async function POST(request: NextRequest) {
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
     }
 
-    console.log('Creating invitation with data:', invitationData)
-
     const { data: invitation, error: invitationError } = await serviceSupabase
       .from('folder_sharing_invitations')
       .insert(invitationData)
       .select()
       .single()
-
-    console.log('Invitation creation result:', { invitation, invitationError })
 
     if (invitationError) {
       console.error('Error creating invitation:', invitationError)
