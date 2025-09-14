@@ -217,22 +217,52 @@ function decryptCredentials(credentials: any[]): any[] {
 // Optimized shared folders function
 async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
   try {
-    const { data: sharedFolders, error } = await serviceSupabase
+    // First get the shared folder access records
+    const { data: sharedAccess, error: accessError } = await serviceSupabase
       .from('shared_folder_access')
       .select(`
         folder_id,
         permission_level,
         shared_at,
-        owner_email,
-        folder:categories!shared_folder_access_folder_id_fkey(
-          id,
-          name,
-          color,
-          icon,
-          created_at,
-          updated_at
-        ),
-        credentials:folder_credentials(
+        owner_email
+      `)
+      .eq('shared_with_user_id', userId)
+
+    if (accessError) {
+      console.error('Error fetching shared folder access:', accessError)
+      return { data: [], error: accessError }
+    }
+
+    if (!sharedAccess || sharedAccess.length === 0) {
+      return { data: [], error: null }
+    }
+
+    // Get folder details for each shared folder
+    const folderIds = sharedAccess.map((access: any) => access.folder_id)
+    const { data: folders, error: foldersError } = await serviceSupabase
+      .from('categories')
+      .select(`
+        id,
+        name,
+        color,
+        icon,
+        created_at,
+        updated_at
+      `)
+      .in('id', folderIds)
+
+    if (foldersError) {
+      console.error('Error fetching folder details:', foldersError)
+      return { data: [], error: foldersError }
+    }
+
+    // Get shared credentials for each folder
+    const { data: sharedCreds, error: credsError } = await serviceSupabase
+      .from('shared_credentials')
+      .select(`
+        credential_id,
+        folder_id,
+        credentials:credential_id(
           id,
           service_name,
           service_url,
@@ -246,29 +276,52 @@ async function getSharedFoldersOptimized(serviceSupabase: any, userId: string) {
         )
       `)
       .eq('shared_with_user_id', userId)
-      .eq('status', 'accepted')
+      .in('folder_id', folderIds)
 
-    if (error) {
-      console.error('Error fetching shared folders:', error)
-      return { data: [], error }
+    if (credsError) {
+      console.error('Error fetching shared credentials:', credsError)
+      return { data: [], error: credsError }
     }
 
-    return {
-      data: sharedFolders?.map((folder: any) => ({
-        id: `shared-${folder.folder_id}`,
+    // Group credentials by folder
+    const credentialsByFolder: { [key: string]: any[] } = {}
+    if (sharedCreds) {
+      sharedCreds.forEach((sharedCred: any) => {
+        if (sharedCred.credentials) {
+          if (!credentialsByFolder[sharedCred.folder_id]) {
+            credentialsByFolder[sharedCred.folder_id] = []
+          }
+          credentialsByFolder[sharedCred.folder_id].push(sharedCred.credentials)
+        }
+      })
+    }
+
+    // Combine the data
+    const result = sharedAccess.map((access: any) => {
+      const folder = folders?.find((f: any) => f.id === access.folder_id)
+      const folderCredentials = credentialsByFolder[access.folder_id] || []
+      
+      return {
+        id: `shared-${access.folder_id}`,
         user_id: 'shared',
-        name: folder.folder?.name || 'Unknown Folder',
-        color: folder.folder?.color || '#3B82F6',
-        icon: folder.folder?.icon || 'folder',
-        created_at: folder.shared_at,
-        updated_at: folder.shared_at,
+        name: folder?.name || 'Unknown Folder',
+        color: folder?.color || '#3B82F6',
+        icon: folder?.icon || 'folder',
+        created_at: access.shared_at,
+        updated_at: access.shared_at,
         is_shared: true,
-        shared_permission: folder.permission_level,
-        original_folder_id: folder.folder_id,
-        folder_id: folder.folder_id,
-        credentials: decryptCredentials(folder.credentials || []),
-        owner_email: folder.owner_email
-      })) || [],
+        shared_permission: access.permission_level,
+        original_folder_id: access.folder_id,
+        folder_id: access.folder_id,
+        credentials: decryptCredentials(folderCredentials),
+        owner_email: access.owner_email
+      }
+    })
+
+    console.log('🔍 Debug - Shared Folders Result:', result)
+
+    return {
+      data: result,
       error: null
     }
   } catch (error) {
