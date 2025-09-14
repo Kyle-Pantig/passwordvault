@@ -8,8 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "setup": "node setup-env.js",
-    "socket": "cd socket-server && node server.js",
-    "dev:all": "concurrently \"npm run dev\" \"npm run socket\""
+    "socket": "node socket-server.js",
+    "socket:prod": "node server-production.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run socket\"",
+    "docker:socket:build": "docker build -f Dockerfile.socket -t passwordvault-socket-server .",
+    "docker:socket:run": "docker run -d --name passwordvault-socket --env-file .env.local -p 3001:3001 --restart unless-stopped passwordvault-socket-server",
+    "docker:socket:stop": "docker stop passwordvault-socket && docker rm passwordvault-socket",
+    "docker:socket:deploy": "chmod +x deploy-socket-docker.sh && ./deploy-socket-docker.sh"
   },
   "dependencies": {
     "@hcaptcha/react-hcaptcha": "^1.12.1",

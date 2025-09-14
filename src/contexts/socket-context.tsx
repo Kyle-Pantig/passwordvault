@@ -41,7 +41,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     // Initialize socket connection with retry logic
     const initSocket = async () => {
       const token = await getSessionToken()
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+      // Use the same domain as the main app for Railway deployment
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+        (process.env.NODE_ENV === 'production' 
+          ? 'https://passwordvault-production.up.railway.app:3001'
+          : 'http://localhost:3001')
       
       console.log('Attempting to connect to socket server:', socketUrl)
       

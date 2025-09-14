@@ -1,5 +1,5 @@
-// Load environment variables from parent directory
-require('dotenv').config({ path: '../.env.local' })
+// Production socket server
+require('dotenv').config({ path: '.env.local' })
 
 const { createServer } = require('http')
 const { Server } = require('socket.io')
@@ -13,7 +13,7 @@ const httpServer = createServer((req, res) => {
       status: 'ok', 
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development'
+      environment: 'production'
     }))
     return
   }
@@ -22,30 +22,20 @@ const httpServer = createServer((req, res) => {
   res.writeHead(404, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify({ error: 'Not found' }))
 })
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_APP_URL 
-      : "http://localhost:3000",
+    origin: process.env.NEXT_PUBLIC_APP_URL || "https://passwordvault-production.up.railway.app",
     methods: ["GET", "POST"],
     credentials: true
   },
   transports: ['websocket', 'polling'],
-  pingTimeout: 60000, // 60 seconds
-  pingInterval: 25000, // 25 seconds
-  connectTimeout: 45000, // 45 seconds
-  upgradeTimeout: 10000, // 10 seconds
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+  upgradeTimeout: 10000,
   allowEIO3: true
 })
-
-// Check for required environment variables
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing required environment variables:')
-  console.error('- NEXT_PUBLIC_SUPABASE_URL')
-  console.error('- SUPABASE_SERVICE_ROLE_KEY')
-  console.error('Please check your environment variables')
-  process.exit(1)
-}
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -190,9 +180,8 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Socket server running on port ${PORT}`)
-  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`🌐 CORS origin: ${process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}`)
+  console.log(`🚀 Production Socket server running on port ${PORT}`)
+  console.log(`🌐 CORS origin: ${process.env.NEXT_PUBLIC_APP_URL || 'https://passwordvault-production.up.railway.app'}`)
   console.log(`🔗 Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing'}`)
   console.log(`🔑 Service Role Key: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing'}`)
 })
