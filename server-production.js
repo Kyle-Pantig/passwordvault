@@ -31,11 +31,14 @@ const httpServer = createServer((req, res) => {
         if (event && userId) {
           // Emit event to specific user
           const socketId = userSockets.get(userId)
+          console.log(`Attempting to emit ${event} to user ${userId}, socket ID: ${socketId}`)
           if (socketId) {
             io.to(socketId).emit(event, data)
+            console.log(`Successfully emitted ${event} to user ${userId}`)
             res.writeHead(200, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ success: true, message: 'Event emitted' }))
           } else {
+            console.log(`User ${userId} not connected, cannot emit ${event}`)
             res.writeHead(404, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ success: false, message: 'User not connected' }))
           }
@@ -58,7 +61,7 @@ const httpServer = createServer((req, res) => {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NEXT_PUBLIC_APP_URL || "https://passwordvault-production.up.railway.app",
+    origin: process.env.NEXT_PUBLIC_APP_URL || "https://digivault-sand.vercel.app",
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -111,6 +114,7 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
   const userData = socket.userData
   
+  console.log(`User connected: ${userData.email} (${userData.userId}) - Socket ID: ${socket.id}`)
   
   // Store user socket mapping
   userSockets.set(userData.userId, socket.id)
@@ -131,10 +135,10 @@ io.on('connection', (socket) => {
       
       // Update invitation status in database
       const { data: invitation, error: invitationError } = await supabase
-        .from('folder_invitations')
-        .select('*, folder:categories(*)')
+        .from('folder_sharing_invitations')
+        .select('*, categories!inner(*)')
         .eq('id', invitationId)
-        .eq('invited_user_id', userData.userId)
+        .eq('invited_email', userData.email)
         .single()
 
       if (invitationError || !invitation) {
@@ -144,8 +148,12 @@ io.on('connection', (socket) => {
 
       // Update invitation status
       const { error: updateError } = await supabase
-        .from('folder_invitations')
-        .update({ status: 'accepted' })
+        .from('folder_sharing_invitations')
+        .update({ 
+          status: 'accepted',
+          invited_user_id: userData.userId,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', invitationId)
 
       if (updateError) {
@@ -154,7 +162,7 @@ io.on('connection', (socket) => {
       }
 
       // Notify folder owner
-      const ownerSocketId = userSockets.get(invitation.folder.user_id)
+      const ownerSocketId = userSockets.get(invitation.owner_id)
       if (ownerSocketId) {
         io.to(ownerSocketId).emit('invitation:accepted', {
           invitationId,
@@ -166,7 +174,7 @@ io.on('connection', (socket) => {
       socket.emit('invitation:accepted', {
         invitationId,
         folderId: invitation.folder_id,
-        folderName: invitation.folder.name
+        folderName: invitation.categories?.name || 'Unknown Folder'
       })
 
     } catch (error) {
@@ -181,10 +189,13 @@ io.on('connection', (socket) => {
       
       // Update invitation status
       const { error: updateError } = await supabase
-        .from('folder_invitations')
-        .update({ status: 'declined' })
+        .from('folder_sharing_invitations')
+        .update({ 
+          status: 'declined',
+          updated_at: new Date().toISOString()
+        })
         .eq('id', invitationId)
-        .eq('invited_user_id', userData.userId)
+        .eq('invited_email', userData.email)
 
       if (updateError) {
         socket.emit('error', { message: 'Failed to decline invitation' })
@@ -200,6 +211,7 @@ io.on('connection', (socket) => {
 
   // Handle disconnection
   socket.on('disconnect', (reason) => {
+    console.log(`User disconnected: ${userData.email} (${userData.userId}) - Reason: ${reason}`)
     userSockets.delete(userData.userId)
   })
   

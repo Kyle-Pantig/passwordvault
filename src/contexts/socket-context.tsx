@@ -44,7 +44,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       // Use the same domain as the main app for Railway deployment
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
         (process.env.NODE_ENV === 'production' 
-          ? window.location.origin
+          ? window.location.origin.replace('3000', '3001')
           : 'http://localhost:3001')
       
       
@@ -62,15 +62,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       })
 
       newSocket.on('connect', () => {
+        console.log('Socket connected successfully')
         setIsConnected(true)
         setConnectionAttempts(0) // Reset attempts on successful connection
       })
 
       newSocket.on('disconnect', (reason: any) => {
+        console.log('Socket disconnected:', reason)
         setIsConnected(false)
       })
 
       newSocket.on('connect_error', (error: any) => {
+        console.error('Socket connection error:', error)
         setIsConnected(false)
         setConnectionAttempts(prev => prev + 1)
         
