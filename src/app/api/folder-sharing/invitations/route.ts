@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Create shared folder access
+      // Create shared folder access (this will fail if user already has access due to unique constraint)
       const { error: accessError } = await serviceSupabase
         .from('shared_folder_access')
         .insert({
@@ -190,6 +190,21 @@ export async function POST(request: NextRequest) {
       if (accessError) {
         console.error('Error creating shared access:', accessError)
         return NextResponse.json({ error: 'Failed to create shared access' }, { status: 500 })
+      }
+
+      // Clean up any other accepted invitations for this user and folder
+      // This prevents duplicate invitation records for the same user
+      const { error: cleanupError } = await serviceSupabase
+        .from('folder_sharing_invitations')
+        .delete()
+        .eq('folder_id', invitation.folder_id)
+        .eq('invited_email', user.email)
+        .eq('status', 'accepted')
+        .neq('id', invitationId) // Don't delete the current invitation
+
+      if (cleanupError) {
+        console.warn('Error cleaning up duplicate invitations:', cleanupError)
+        // Don't fail the request if cleanup fails
       }
 
       // Get all credentials in this folder and share them
@@ -222,16 +237,47 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Emit socket event to notify the folder owner
+      // Create notification and emit socket event to notify the folder owner
       try {
+        // Get folder name for notification
+        const { data: folder } = await serviceSupabase
+          .from('categories')
+          .select('name')
+          .eq('id', invitation.folder_id)
+          .single()
+
+        // Create notification in database
+        const { createInvitationAcceptedNotification } = await import('@/lib/notification-service')
+        await createInvitationAcceptedNotification(
+          invitation.owner_id,
+          user.email!,
+          folder?.name || 'Unknown Folder',
+          invitationId,
+          invitation.folder_id
+        )
+
+        // Emit socket event to notify the folder owner
         await emitToUser(invitation.owner_id, 'invitation:accepted', {
           invitationId,
           folderId: invitation.folder_id,
           userId: user.id,
           userEmail: user.email
         })
+
+        // Also emit notification event
+        await emitToUser(invitation.owner_id, 'notification:new', {
+          type: 'invitation_accepted',
+          title: 'Invitation Accepted',
+          message: `${user.email} accepted your invitation to the "${folder?.name || 'Unknown Folder'}" folder`,
+          data: {
+            invitationId,
+            folderId: invitation.folder_id,
+            folderName: folder?.name || 'Unknown Folder',
+            userEmail: user.email
+          }
+        })
       } catch (error) {
-        console.warn('Failed to emit socket event for invitation acceptance:', error)
+        console.warn('Failed to create notification or emit socket event for invitation acceptance:', error)
       }
 
       return NextResponse.json({
@@ -254,16 +300,47 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to decline invitation' }, { status: 500 })
       }
 
-      // Emit socket event to notify the folder owner
+      // Create notification and emit socket event to notify the folder owner
       try {
+        // Get folder name for notification
+        const { data: folder } = await serviceSupabase
+          .from('categories')
+          .select('name')
+          .eq('id', invitation.folder_id)
+          .single()
+
+        // Create notification in database
+        const { createInvitationDeclinedNotification } = await import('@/lib/notification-service')
+        await createInvitationDeclinedNotification(
+          invitation.owner_id,
+          user.email!,
+          folder?.name || 'Unknown Folder',
+          invitationId,
+          invitation.folder_id
+        )
+
+        // Emit socket event to notify the folder owner
         await emitToUser(invitation.owner_id, 'invitation:declined', {
           invitationId,
           folderId: invitation.folder_id,
           userId: user.id,
           userEmail: user.email
         })
+
+        // Also emit notification event
+        await emitToUser(invitation.owner_id, 'notification:new', {
+          type: 'invitation_declined',
+          title: 'Invitation Declined',
+          message: `${user.email} declined your invitation to the "${folder?.name || 'Unknown Folder'}" folder`,
+          data: {
+            invitationId,
+            folderId: invitation.folder_id,
+            folderName: folder?.name || 'Unknown Folder',
+            userEmail: user.email
+          }
+        })
       } catch (error) {
-        console.warn('Failed to emit socket event for invitation decline:', error)
+        console.warn('Failed to create notification or emit socket event for invitation decline:', error)
       }
 
       return NextResponse.json({

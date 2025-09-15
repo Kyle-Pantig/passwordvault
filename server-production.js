@@ -1,5 +1,8 @@
 // Production socket server
-require('dotenv').config({ path: '.env.local' })
+// In production, environment variables are set directly by Railway
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: '.env.local' })
+}
 
 const { createServer } = require('http')
 const { Server } = require('socket.io')
@@ -32,13 +35,15 @@ const httpServer = createServer((req, res) => {
           // Emit event to specific user
           const socketId = userSockets.get(userId)
           console.log(`Attempting to emit ${event} to user ${userId}, socket ID: ${socketId}`)
+          console.log(`Current connected users:`, Array.from(userSockets.keys()))
           if (socketId) {
             io.to(socketId).emit(event, data)
-            console.log(`Successfully emitted ${event} to user ${userId}`)
+            console.log(`Successfully emitted ${event} to user ${userId} with data:`, data)
             res.writeHead(200, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ success: true, message: 'Event emitted' }))
           } else {
             console.log(`User ${userId} not connected, cannot emit ${event}`)
+            console.log(`Available user IDs:`, Array.from(userSockets.keys()))
             res.writeHead(404, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ success: false, message: 'User not connected' }))
           }
@@ -85,19 +90,24 @@ const userSockets = new Map()
 // Middleware to authenticate socket connections
 io.use(async (socket, next) => {
   try {
+    console.log('Socket connection attempt from:', socket.handshake.address)
     const token = socket.handshake.auth.token
     
     if (!token) {
+      console.log('No authentication token provided')
       return next(new Error('Authentication token required'))
     }
 
+    console.log('Verifying token for user...')
     // Verify the JWT token with Supabase
     const { data: { user }, error } = await supabase.auth.getUser(token)
     
     if (error || !user) {
+      console.log('Token verification failed:', error?.message)
       return next(new Error('Invalid authentication token'))
     }
 
+    console.log('User authenticated:', user.email, user.id)
     // Store user data in socket
     socket.userData = {
       userId: user.id,
@@ -106,6 +116,7 @@ io.use(async (socket, next) => {
 
     next()
   } catch (error) {
+    console.log('Authentication error:', error.message)
     next(new Error('Authentication failed'))
   }
 })
@@ -115,9 +126,11 @@ io.on('connection', (socket) => {
   const userData = socket.userData
   
   console.log(`User connected: ${userData.email} (${userData.userId}) - Socket ID: ${socket.id}`)
+  console.log(`Total connected users: ${userSockets.size + 1}`)
   
   // Store user socket mapping
   userSockets.set(userData.userId, socket.id)
+  console.log(`User socket mapping updated. Current mappings:`, Array.from(userSockets.entries()))
 
   // Join user to their personal room
   socket.join(`user:${userData.userId}`)

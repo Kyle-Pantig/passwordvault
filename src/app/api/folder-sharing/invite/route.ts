@@ -64,26 +64,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot invite yourself' }, { status: 400 })
     }
 
-    // Check existing invitations count (max 5)
-    const { data: existingInvitations, error: countError } = await serviceSupabase
-      .from('folder_sharing_invitations')
-      .select('id')
+    // Check existing shared users count (max 5) - count unique users, not invitation records
+    const { data: existingSharedUsers, error: countError } = await serviceSupabase
+      .from('shared_folder_access')
+      .select('shared_with_user_id')
       .eq('folder_id', folderId)
-      .in('status', ['pending', 'accepted'])
+      .eq('owner_id', user.id)
 
     if (countError) {
-      console.error('Error checking existing invitations:', countError)
-      return NextResponse.json({ error: 'Failed to check existing invitations' }, { status: 500 })
+      console.error('Error checking existing shared users:', countError)
+      return NextResponse.json({ error: 'Failed to check existing shared users' }, { status: 500 })
     }
 
-    if (existingInvitations && existingInvitations.length >= 5) {
+    // Also count pending invitations for users who don't have access yet
+    const { data: pendingInvitations, error: pendingError } = await serviceSupabase
+      .from('folder_sharing_invitations')
+      .select('invited_email')
+      .eq('folder_id', folderId)
+      .eq('owner_id', user.id)
+      .eq('status', 'pending')
+
+    if (pendingError) {
+      console.error('Error checking pending invitations:', pendingError)
+      return NextResponse.json({ error: 'Failed to check pending invitations' }, { status: 500 })
+    }
+
+    // Count unique users (existing shared users + pending invitations)
+    const uniqueUsers = new Set()
+    
+    // Add existing shared users
+    existingSharedUsers?.forEach(user => {
+      uniqueUsers.add(user.shared_with_user_id)
+    })
+    
+    // Add pending invitations (by email, since we don't know their user ID yet)
+    pendingInvitations?.forEach(invitation => {
+      uniqueUsers.add(invitation.invited_email)
+    })
+
+    if (uniqueUsers.size >= 5) {
       return NextResponse.json({ error: 'Maximum of 5 users can be invited to a folder' }, { status: 400 })
     }
 
     // Check if invitation already exists
     const { data: existingInvitation, error: existingError } = await serviceSupabase
       .from('folder_sharing_invitations')
-      .select('id, status')
+      .select('id, status, expires_at')
       .eq('folder_id', folderId)
       .eq('invited_email', invitedEmail)
       .single()
@@ -95,9 +121,31 @@ export async function POST(request: NextRequest) {
 
     if (existingInvitation) {
       if (existingInvitation.status === 'pending') {
-        return NextResponse.json({ error: 'Invitation already sent to this email' }, { status: 400 })
+        // Check if invitation is expired
+        const isExpired = new Date(existingInvitation.expires_at) < new Date()
+        if (isExpired) {
+          // Delete expired invitation and continue with new one
+          await serviceSupabase
+            .from('folder_sharing_invitations')
+            .delete()
+            .eq('id', existingInvitation.id)
+        } else {
+          return NextResponse.json({ 
+            error: 'Invitation already sent to this email',
+            details: 'A pending invitation already exists for this email address'
+          }, { status: 400 })
+        }
       } else if (existingInvitation.status === 'accepted') {
-        return NextResponse.json({ error: 'User already has access to this folder' }, { status: 400 })
+        return NextResponse.json({ 
+          error: 'User already has access to this folder',
+          details: 'This user has already accepted an invitation to access this folder'
+        }, { status: 400 })
+      } else if (existingInvitation.status === 'declined') {
+        // Allow resending invitation if it was previously declined
+        await serviceSupabase
+          .from('folder_sharing_invitations')
+          .delete()
+          .eq('id', existingInvitation.id)
       }
     }
 
@@ -128,6 +176,15 @@ export async function POST(request: NextRequest) {
         details: invitationError.details,
         hint: invitationError.hint
       })
+      
+      // Handle specific database errors
+      if (invitationError.code === '23505') {
+        return NextResponse.json({ 
+          error: 'Invitation already exists',
+          details: 'An invitation for this email address already exists for this folder'
+        }, { status: 400 })
+      }
+      
       return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })
     }
 
@@ -145,13 +202,24 @@ export async function POST(request: NextRequest) {
       console.warn('Failed to send invitation email, but invitation was created')
     }
 
-    // Emit real-time event to notify the invited user (if they're online)
+    // Create notification and emit real-time event to notify the invited user (if they're online)
     try {
       // Get the invited user's ID from auth.users table
       const { data: invitedUsers } = await serviceSupabase.auth.admin.listUsers()
       const invitedUser = invitedUsers?.users?.find(u => u.email === invitedEmail)
 
       if (invitedUser) {
+        // Create notification in database
+        const { createInvitationNotification } = await import('@/lib/notification-service')
+        await createInvitationNotification(
+          invitedUser.id,
+          folder.name,
+          user.email!,
+          invitation.id,
+          folderId,
+          permissionLevel
+        )
+
         // Emit invitation created event to the invited user
         await emitToUser(invitedUser.id, 'invitation:created', {
           invitationId: invitation.id,
@@ -163,9 +231,33 @@ export async function POST(request: NextRequest) {
           permissionLevel: permissionLevel,
           expiresAt: invitation.expires_at
         })
+
+        // Emit invitation created event for real-time updates
+        await emitToUser(user.id, 'invitation:created', {
+          folderId: folderId,
+          invitedEmail: invitedEmail,
+          invitationId: invitation.id,
+          permissionLevel: permissionLevel
+        })
+
+        // Also emit notification event
+        await emitToUser(invitedUser.id, 'notification:new', {
+          type: 'invitation_created',
+          title: 'New Folder Invitation',
+          message: `${user.email} invited you to access the "${folder.name}" folder`,
+          data: {
+            invitationId: invitation.id,
+            folderId: folderId,
+            folderName: folder.name,
+            ownerEmail: user.email,
+            permissionLevel: permissionLevel,
+            folderColor: folder.color || '#3b82f6',
+            folderIcon: folder.icon || 'folder'
+          }
+        })
       }
     } catch (error) {
-      console.warn('Failed to emit socket event for invitation creation:', error)
+      console.warn('Failed to create notification or emit socket event for invitation creation:', error)
     }
 
     return NextResponse.json({

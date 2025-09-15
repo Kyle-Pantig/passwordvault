@@ -17,7 +17,7 @@ import {
   HelpCircle,
   AlertTriangle
 } from 'lucide-react'
-import { InvitationsNotification } from '@/components/ui/invitations-notification'
+import { NotificationBell } from '@/components/notification-bell'
 import { LoaderThree } from '@/components/ui/loader'
 import { 
   Navbar, 
@@ -50,8 +50,16 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
       riskLevel: securityStatus.riskLevel
     },
     { name: 'Settings', link: '/settings' },
-    { name: 'Help', link: '/help' }
-  ] : []
+    { name: 'Help', link: '/help' },
+    { name: 'Terms', link: '/terms' },
+    { name: 'Privacy', link: '/privacy' }
+  ] : [
+    { name: 'Home', link: '/' },
+    { name: 'Pricing', link: '/pricing' },
+    { name: 'Help', link: '/help' },
+    { name: 'Terms', link: '/terms' },
+    { name: 'Privacy', link: '/privacy' }
+  ]
 
   const handleLogout = async () => {
     await signOut()
@@ -67,6 +75,8 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
 
   const getPageTitle = () => {
     switch (pathname) {
+      case '/':
+        return 'DigiVault'
       case '/vault':
         return 'DigiVault'
       case '/security':
@@ -75,6 +85,10 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
         return 'Settings'
       case '/help':
         return 'Help & Support'
+      case '/terms':
+        return 'Terms of Service'
+      case '/privacy':
+        return 'Privacy Policy'
       case '/setup-2fa':
         return 'Setup 2FA'
       case '/verify-2fa':
@@ -86,6 +100,8 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
 
   const getPageIcon = () => {
     switch (pathname) {
+      case '/':
+        return <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
       case '/vault':
         return <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
       case '/security':
@@ -94,6 +110,10 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
         return <Settings className="h-8 w-8 text-blue-600 dark:text-blue-400" />
       case '/help':
         return <HelpCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+      case '/terms':
+        return <Shield className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+      case '/privacy':
+        return <Shield className="h-8 w-8 text-gray-600 dark:text-gray-400" />
       case '/setup-2fa':
         return <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
       case '/verify-2fa':
@@ -130,7 +150,7 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
   }
 
   // Show navbar for authenticated users on all pages (except auth pages)
-  // Show navbar for unauthenticated users only on public pages (help, privacy, terms)
+  // Show navbar for unauthenticated users only on public pages (help, terms, privacy)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
@@ -166,7 +186,7 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
             </NavbarButton>
             {user ? (
               <>
-                <InvitationsNotification />
+                <NotificationBell />
                 <NavbarButton
                   as="button"
                   onClick={handleLogout}
@@ -224,10 +244,13 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
                 {getPageTitle()}
               </span>
             </div>
-            <MobileNavToggle
-              isOpen={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            />
+            <div className="flex items-center space-x-2">
+              {user && <NotificationBell />}
+              <MobileNavToggle
+                isOpen={isMobileMenuOpen}
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              />
+            </div>
           </MobileNavHeader>
           
           <MobileNavMenu
@@ -261,11 +284,6 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
                   ))}
                   <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex flex-col space-y-3">
-                      {user && (
-                        <div className="flex justify-center">
-                          <InvitationsNotification />
-                        </div>
-                      )}
                       <div className="flex items-center justify-between">
                         <Button
                           variant="ghost"
@@ -310,11 +328,6 @@ export default function NavbarLayout({ children }: { children: React.ReactNode }
               )}
               {navItems.length === 0 && (
                 <div className="flex flex-col space-y-3">
-                  {user && (
-                    <div className="flex justify-center">
-                      <InvitationsNotification />
-                    </div>
-                  )}
                   <div className="flex items-center justify-between">
                     <Button
                       variant="ghost"

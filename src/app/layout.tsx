@@ -138,7 +138,7 @@ export default function RootLayout({
                       <LoadingWrapper>
                         <div className="min-h-screen flex flex-col">
                           <NavbarLayout>
-                            <div className="mt-16">
+                            <div className="relative">
                               {children}
                             </div>
                           </NavbarLayout>

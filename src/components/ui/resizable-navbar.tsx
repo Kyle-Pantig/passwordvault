@@ -33,6 +33,7 @@ interface NavItemsProps {
   }[];
   className?: string;
   onItemClick?: () => void;
+  visible?: boolean;
 }
 
 interface MobileNavProps {
@@ -95,7 +96,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         boxShadow: visible
           ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
           : "none",
-        width: visible ? "40%" : "100%",
+        width: visible ? "50%" : "80%",
         y: visible ? 20 : 0,
       }}
       transition={{
@@ -104,27 +105,40 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         damping: 50,
       }}
       style={{
-        minWidth: "800px",
+        minWidth: visible ? "500px" : "800px",
       }}
       className={cn(
-        "relative z-[60] mx-auto dark:border dark:border-gray-500hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-white/90 dark:bg-neutral-950/90 px-4 py-2 lg:flex backdrop-blur-sm",
+        "relative z-[60] mx-auto dark:border dark:border-gray-500hidden w-full max-w-6xl flex-row items-center justify-between self-start rounded-full bg-white/90 dark:bg-neutral-950/90 px-4 py-2 lg:flex backdrop-blur-sm",
         visible && "bg-white/95 dark:bg-neutral-950/95",
         className,
       )}
     >
-      {children}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          // Only pass visible prop to NavItems component
+          if (child.type && typeof child.type === 'function' && child.type.name === 'NavItems') {
+            return React.cloneElement(
+              child as React.ReactElement<{ visible?: boolean }>,
+              { visible },
+            );
+          }
+          return child;
+        }
+        return child;
+      })}
     </motion.div>
   );
 };
 
-export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
+export const NavItems = ({ items, className, onItemClick, visible }: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <motion.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2 pointer-events-none",
+        "absolute inset-0 hidden flex-1 flex-row items-center justify-center text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex pointer-events-none",
+        visible ? "space-x-1" : "space-x-2",
         className,
       )}
     >
@@ -132,7 +146,10 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         <Link
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300 pointer-events-auto"
+          className={cn(
+            "relative py-2 text-neutral-600 dark:text-neutral-300 pointer-events-auto text-sm transition-all duration-200",
+            visible ? "px-2" : "px-3"
+          )}
           key={`link-${idx}`}
           href={item.link}
         >

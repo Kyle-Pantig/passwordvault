@@ -1,83 +1,111 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Check, Crown, Star, Zap } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Check, Crown, Star, Zap, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useSubscription } from '@/contexts/subscription-context'
 import { toast } from 'sonner'
 
-const getPlans = (currentPlan: string | null) => [
-  {
-    name: 'Free',
-    price: '₱0',
-    period: '/month',
-    description: 'Essential password management',
-    icon: Star,
-    badge: null,
-    credentialLimit: 30,
-    features: [
-      '30 password storage',
-      '2FA protection',
-      'Folder lock',
-      '256-bit encryption',
-      'Password generator',
-      'Basic support'
-    ],
-    buttonText: currentPlan === 'FREE' ? 'Current Plan' : 'Downgrade to Free',
-    buttonVariant: currentPlan === 'FREE' ? 'outline' as const : 'secondary' as const,
-    disabled: currentPlan === 'FREE'
-  },
-  {
-    name: 'Plus',
-    price: '₱49',
-    period: '/month',
-    description: 'Advanced features for professionals',
-    icon: Zap,
-    badge: null,
-    credentialLimit: 100,
-    features: [
-      '100 password storage',
-      'All security features',
-      'Priority support',
-      'Advanced analytics',
-      'Export/Import',
-    ],
-    buttonText: currentPlan === 'PLUS' ? 'Current Plan' : 'Upgrade to Plus',
-    buttonVariant: currentPlan === 'PLUS' ? 'outline' as const : 'default' as const,
-    disabled: currentPlan === 'PLUS'
-  },
-  {
-    name: 'Pro',
-    price: '₱149',
-    period: '/month',
-    description: 'Complete solution for teams',
-    icon: Crown,
-    badge: null,
-    credentialLimit: 'Unlimited',
-    features: [
-      'Unlimited password storage',
-      'Family sharing (up to 6 users)',
-      'Advanced security features',
-      'Enterprise features',
-      'Priority support',
-    ],
-    buttonText: currentPlan === 'PRO' ? 'Current Plan' : 'Upgrade to Pro',
-    buttonVariant: currentPlan === 'PRO' ? 'outline' as const : 'default' as const,
-    disabled: currentPlan === 'PRO'
+const getPlans = (currentPlan: string | null) => {
+  const getButtonText = (planName: string) => {
+    if (currentPlan === planName.toUpperCase()) {
+      return 'Current Plan'
+    }
+    
+    if (!currentPlan || currentPlan === 'FREE') {
+      return `Get ${planName}`
+    }
+    
+    // For authenticated users with paid plans
+    const planHierarchy = { 'FREE': 0, 'PLUS': 1, 'PRO': 2 }
+    const currentLevel = planHierarchy[currentPlan as keyof typeof planHierarchy] || 0
+    const targetLevel = planHierarchy[planName.toUpperCase() as keyof typeof planHierarchy] || 0
+    
+    if (targetLevel > currentLevel) {
+      return `Upgrade to ${planName}`
+    } else {
+      return `Downgrade to ${planName}`
+    }
   }
-]
+
+  return [
+    {
+      name: 'Free',
+      price: '₱0',
+      period: '/month',
+      description: 'Essential password management',
+      icon: Star,
+      badge: null,
+      credentialLimit: 30,
+      features: [
+        '30 password storage',
+        '2FA protection',
+        'Folder lock',
+        '256-bit encryption',
+        'Password generator',
+        'Basic support'
+      ],
+      buttonText: getButtonText('Free'),
+      buttonVariant: currentPlan === 'FREE' ? 'outline' as const : 'secondary' as const,
+      disabled: currentPlan === 'FREE'
+    },
+    {
+      name: 'Plus',
+      price: '₱49',
+      period: '/month',
+      description: 'Advanced features for professionals',
+      icon: Zap,
+      badge: !currentPlan || currentPlan === 'FREE' ? 'Most Popular' : null,
+      credentialLimit: 100,
+      features: [
+        '100 password storage',
+        'All security features',
+        'Priority support',
+        'Advanced analytics',
+        'Export/Import',
+      ],
+      buttonText: getButtonText('Plus'),
+      buttonVariant: currentPlan === 'PLUS' ? 'outline' as const : 'default' as const,
+      disabled: currentPlan === 'PLUS'
+    },
+    {
+      name: 'Pro',
+      price: '₱149',
+      period: '/month',
+      description: 'Complete solution for teams',
+      icon: Crown,
+      badge: null,
+      credentialLimit: 'Unlimited',
+      features: [
+        'Unlimited password storage',
+        'Family sharing (up to 6 users)',
+        'Advanced security features',
+        'Enterprise features',
+        'Priority support',
+      ],
+      buttonText: getButtonText('Pro'),
+      buttonVariant: currentPlan === 'PRO' ? 'outline' as const : 'default' as const,
+      disabled: currentPlan === 'PRO'
+    }
+  ]
+}
 
 export default function PricingPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const { subscription, loading: subscriptionLoading } = useSubscription()
   const [loading, setLoading] = useState<string | null>(null)
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false)
+  const [pendingDowngrade, setPendingDowngrade] = useState<string | null>(null)
 
   const handleUpgrade = async (planName: string) => {
     if (!user) {
-      toast.error('Please sign in to upgrade your plan')
+      router.push('/signup')
       return
     }
 
@@ -87,9 +115,17 @@ export default function PricingPage() {
       return
     }
 
+    // Show confirmation dialog for downgrades
+    if (planName === 'Free') {
+      setPendingDowngrade(planName)
+      setShowDowngradeConfirm(true)
+      return
+    }
+
     setLoading(planName)
     
     try {
+      // Handle paid plan upgrades
       const priceIds = {
         'Plus': 'price_1S75W8Jx1m9YGIek0oOITRBT', 
         'Pro': 'price_1S75WzJx1m9YGIeknlN8cpVP'   
@@ -132,8 +168,49 @@ export default function PricingPage() {
     }
   }
 
+  const handleConfirmDowngrade = async () => {
+    if (!pendingDowngrade || !user) return
+
+    setLoading(pendingDowngrade)
+    setShowDowngradeConfirm(false)
+    
+    try {
+      const response = await fetch('/api/subscription/downgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          newPlan: 'FREE'
+        }),
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast.success('Successfully downgraded to Free plan')
+        // Refresh the page to update subscription data
+        window.location.reload()
+      } else {
+        toast.error(result.error || 'Failed to downgrade plan')
+      }
+    } catch (error) {
+      console.error('Error downgrading subscription:', error)
+      toast.error('Failed to downgrade plan')
+    } finally {
+      setLoading(null)
+      setPendingDowngrade(null)
+    }
+  }
+
+  const handleCancelDowngrade = () => {
+    setShowDowngradeConfirm(false)
+    setPendingDowngrade(null)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black py-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-black pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -163,6 +240,13 @@ export default function PricingPage() {
                     className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs font-medium bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
                   >
                     Current Plan
+                  </Badge>
+                )}
+                {plan.badge === 'Most Popular' && (
+                  <Badge 
+                    className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs font-medium bg-blue-600 text-white"
+                  >
+                    Most Popular
                   </Badge>
                 )}
                 
@@ -212,6 +296,52 @@ export default function PricingPage() {
           })}
         </div>
       </div>
+
+      {/* Downgrade Confirmation Dialog */}
+      <Dialog open={showDowngradeConfirm} onOpenChange={setShowDowngradeConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Downgrade
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="font-medium text-red-600 dark:text-red-400">
+              This action cannot be undone and no refund will be provided.
+            </div>
+            <div>
+              You are about to downgrade to the <strong>Free plan</strong>. This will:
+            </div>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>Remove access to premium features</li>
+              <li>Limit you to 30 credentials maximum</li>
+              <li>Disable folder sharing capabilities</li>
+              <li>Remove advanced security features</li>
+            </ul>
+            <div className="text-sm font-medium">
+              If you have more than 30 credentials, you'll need to delete some before downgrading.
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelDowngrade}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDowngrade}
+              disabled={loading === pendingDowngrade}
+              className="w-full sm:w-auto"
+            >
+              {loading === pendingDowngrade ? 'Processing...' : 'Yes, Downgrade to Free'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

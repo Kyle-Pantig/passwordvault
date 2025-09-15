@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/auth-context'
 import { useUnlockedFolders } from '@/contexts/unlocked-folders-context'
 import { useSubscription } from '@/contexts/subscription-context'
+import { useSocket } from '@/contexts/socket-context'
 import { useVaultData } from '@/hooks/use-vault-data'
 import { useQueryClient } from '@tanstack/react-query'
 import { db } from '@/lib/database'
@@ -70,9 +71,20 @@ const VaultPage = () => {
     // Use cached vault data
     const { data: vaultData, isLoading, error, refetch } = useVaultData()
     const queryClient = useQueryClient()
+    const { socket, isConnected } = useSocket()
     const credentials = vaultData?.credentials || []
-    const [categories, setCategories] = useState<any[]>(vaultData?.categories || [])
+    const [categories, setCategories] = useState<any[]>([])
     const loading = isLoading
+
+    // Merge regular categories with shared folders
+    useEffect(() => {
+      if (vaultData) {
+        const regularCategories = vaultData.categories || []
+        const sharedFolders = vaultData.sharedFolders || []
+        const mergedCategories = [...regularCategories, ...sharedFolders]
+        setCategories(mergedCategories)
+      }
+    }, [vaultData])
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
@@ -335,6 +347,28 @@ const VaultPage = () => {
     }
     check2FAStatus()
   }, [user])
+
+  // Listen for vault refresh events (e.g., when access is revoked)
+  useEffect(() => {
+    if (socket && isConnected) {
+      const handleVaultRefresh = (data: any) => {
+        // Invalidate and refetch vault data
+        queryClient.invalidateQueries({ queryKey: ['vault-data'] })
+        refetch()
+        
+        // Show a toast notification if it's an access revocation
+        if (data.type === 'access_revoked') {
+          toast.info('Your access to a shared folder has been revoked')
+        }
+      }
+
+      socket.on('vault:refresh', handleVaultRefresh)
+      
+      return () => {
+        socket.off('vault:refresh', handleVaultRefresh)
+      }
+    }
+  }, [socket, isConnected, queryClient, refetch])
 
   // Handle credential parameter from security page
   useEffect(() => {
@@ -1206,8 +1240,12 @@ const VaultPage = () => {
   // Check if a folder is read-only (shared with read permission)
   const isFolderReadOnly = (categoryId: string) => {
     if (!categoryId.startsWith('shared-')) return false
-    const category = categories.find(cat => cat.id === categoryId)
-    return (category as any)?.shared_permission === 'read'
+    
+    // Get the most up-to-date categories from vaultData if available
+    const currentCategories = vaultData ? [...(vaultData.categories || []), ...(vaultData.sharedFolders || [])] : categories
+    const category = currentCategories.find(cat => cat.id === categoryId)
+    const isReadOnly = (category as any)?.shared_permission === 'read'
+    return isReadOnly
   }
 
   // Check if a credential is read-only (shared with read permission)
@@ -1676,7 +1714,7 @@ const VaultPage = () => {
 
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:pt-32 py-20 ">
         {/* Subscription Status Banner */}
         {subscription && subscription.plan !== 'PRO' && (
           <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">

@@ -41,12 +41,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     // Initialize socket connection with retry logic
     const initSocket = async () => {
       const token = await getSessionToken()
-      // Use the same domain as the main app for Railway deployment
+      // Use the Railway socket server URL for production
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
         (process.env.NODE_ENV === 'production' 
-          ? window.location.origin.replace('3000', '3001')
+          ? 'https://passwordvault-production.up.railway.app'
           : 'http://localhost:3001')
-      
       
       const newSocket = io(socketUrl, {
         auth: {
@@ -62,40 +61,41 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       })
 
       newSocket.on('connect', () => {
-        console.log('Socket connected successfully')
         setIsConnected(true)
         setConnectionAttempts(0) // Reset attempts on successful connection
       })
 
       newSocket.on('disconnect', (reason: any) => {
-        console.log('Socket disconnected:', reason)
         setIsConnected(false)
       })
 
       newSocket.on('connect_error', (error: any) => {
         console.error('Socket connection error:', error)
         setIsConnected(false)
-        setConnectionAttempts(prev => prev + 1)
-        
-        // If too many failed attempts, show a warning
-        if (connectionAttempts >= 3) {
-          console.warn('Socket connection failed multiple times. Real-time features may not work.')
-        }
+        setConnectionAttempts(prev => {
+          const newAttempts = prev + 1
+          // If too many failed attempts, show a warning
+          if (newAttempts >= 3) {
+            console.warn('Socket connection failed multiple times. Real-time features may not work.')
+          }
+          return newAttempts
+        })
       })
 
       newSocket.on('reconnect', (attemptNumber: any) => {
         setIsConnected(true)
+        setConnectionAttempts(0)
       })
 
       newSocket.on('reconnect_attempt', (attemptNumber: any) => {
-        // Silent reconnection attempts
       })
 
       newSocket.on('reconnect_error', (error: any) => {
-        // Silent reconnection errors
+        console.error('Socket reconnection error:', error)
       })
 
       newSocket.on('reconnect_failed', () => {
+        console.error('Socket reconnection failed')
         setIsConnected(false)
       })
 
@@ -106,26 +106,46 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       if (socket) {
-        socket.close()
+        socket.disconnect()
+        setSocket(null)
+        setIsConnected(false)
       }
     }
-  }, [user])
+  }, [user, connectionAttempts])
 
   const emit = (event: string, data: any) => {
     if (socket && isConnected) {
-      socket.emit(event, data)
+      try {
+        socket.emit(event, data)
+      } catch (error) {
+        console.error('Error emitting socket event:', error)
+      }
+    } else {
+      console.warn('Cannot emit socket event - socket not connected:', { socket: !!socket, isConnected })
     }
   }
 
   const on = (event: string, callback: (data: any) => void) => {
     if (socket) {
-      socket.on(event, callback)
+      try {
+        socket.on(event, callback)
+      } catch (error) {
+        console.error('Error adding socket listener:', error)
+      }
+    } else {
+      console.warn('Cannot add socket listener - socket not available')
     }
   }
 
   const off = (event: string, callback?: (data: any) => void) => {
     if (socket) {
-      socket.off(event, callback)
+      try {
+        socket.off(event, callback)
+      } catch (error) {
+        console.error('Error removing socket listener:', error)
+      }
+    } else {
+      console.warn('Cannot remove socket listener - socket not available')
     }
   }
 

@@ -56,6 +56,7 @@ export function CategoryFolder({
   isOwner = true,
   isUpdating = false
 }: CategoryFolderProps) {
+  
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(category.name)
   const [showLockDialog, setShowLockDialog] = useState(false)

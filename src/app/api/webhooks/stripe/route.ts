@@ -92,6 +92,14 @@ export async function POST(request: NextRequest) {
 
         if (upsertError) {
           console.error('Error upserting subscription:', upsertError);
+        } else {
+          // Create notification for successful subscription
+          try {
+            const { createSubscriptionNotification } = await import('@/lib/notification-service');
+            await createSubscriptionNotification(userId, planInfo.plan, 'upgraded');
+          } catch (notificationError) {
+            console.error('Error creating subscription notification:', notificationError);
+          }
         }
         break;
       }
@@ -140,6 +148,14 @@ export async function POST(request: NextRequest) {
 
             if (upsertError) {
               console.error('Error upserting subscription from checkout:', upsertError);
+            } else {
+              // Create notification for successful subscription
+              try {
+                const { createSubscriptionNotification } = await import('@/lib/notification-service');
+                await createSubscriptionNotification(userId, planInfo.plan, 'upgraded');
+              } catch (notificationError) {
+                console.error('Error creating subscription notification:', notificationError);
+              }
             }
           } catch (error) {
             console.error('Error retrieving subscription from checkout:', error);
